@@ -1,0 +1,35 @@
+/* Main styles and layout */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
+
+body { 
+    background: #000; 
+    color: #fff; 
+    font-family: 'Courier New', monospace; 
+    overflow: hidden; 
+}
+
+#canvas { 
+    display: block; 
+}
+
+/* Utility classes */
+.hidden { 
+    opacity: 0; 
+    pointer-events: none; 
+}
+
+.error { 
+    color: #ff4444; 
+}
+
+.success { 
+    color: #44ff44; 
+}
+
+.info {
+    color: #ffffff;
+}

@@ -1,0 +1,30 @@
+/* Menu and overlay styles */
+.menu { 
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%); 
+    background: rgba(0,0,0,0.95); 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 2px solid #444; 
+    max-width: 95vw; 
+    max-height: 90vh; 
+    overflow-y: auto; 
+    z-index: 1000; 
+}
+
+.menu h2 { 
+    color: #4CAF50; 
+    margin-bottom: 20px; 
+    text-align: center; 
+}
+
+.menu .section { 
+    margin-bottom: 15px; 
+}
+
+.menu .section h3 { 
+    color: #FFC107; 
+    margin-bottom: 8px; 
+}

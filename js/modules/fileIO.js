@@ -1,4 +1,4 @@
-// File I/O module for save/load functionality
+// File I/O module for save/load functionality with version support
 export class FileManager {
     constructor() {
         this.app = null;
@@ -19,7 +19,7 @@ export class FileManager {
                     palettes: this.app.parameters.getPalettesState()
                 },
                 timeAccumulation: { ...this.app.parameters.timeAccumulation },
-                version: "1.0",
+                version: this.app.VERSION,
                 timestamp: new Date().toISOString(),
                 description: "Kaldao Fractal Visualizer Parameters"
             };
@@ -93,7 +93,8 @@ export class FileManager {
                         
                         const timestamp = saveData.timestamp ? 
                             new Date(saveData.timestamp).toLocaleString() : 'Unknown';
-                        this.app.ui.updateStatus(`✅ Parameters loaded! (Saved: ${timestamp})`, 'success');
+                        const version = saveData.version || 'Unknown';
+                        this.app.ui.updateStatus(`✅ Parameters loaded! (v${version}, ${timestamp})`, 'success');
                         
                     } catch (error) {
                         this.app.ui.updateStatus(`❌ Load failed: ${error.message}`, 'error');
@@ -122,7 +123,7 @@ export class FileManager {
                 invertColors: this.app.invertColors,
                 palettes: this.app.parameters.getPalettesState()
             },
-            version: "1.0",
+            version: this.app.VERSION,
             timestamp: new Date().toISOString(),
             type: "preset"
         };
@@ -175,6 +176,95 @@ export class FileManager {
         } catch (error) {
             console.error('Failed to load preset:', error);
             return false;
+        }
+    }
+
+    // Export current state as URL parameters (for sharing)
+    exportAsURL() {
+        try {
+            const state = {
+                p: this.app.parameters.getState(),
+                pi: this.app.currentPaletteIndex,
+                ucp: this.app.useColorPalette ? 1 : 0,
+                ic: this.app.invertColors ? 1 : 0,
+                v: this.app.VERSION
+            };
+            
+            const compressed = this.compressState(state);
+            const url = new URL(window.location);
+            url.searchParams.set('kaldao', compressed);
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(url.toString()).then(() => {
+                this.app.ui.updateStatus('🔗 URL copied to clipboard!', 'success');
+            }).catch(() => {
+                this.app.ui.updateStatus('🔗 URL generated (copy from address bar)', 'info');
+                window.history.pushState({}, '', url);
+            });
+            
+        } catch (error) {
+            this.app.ui.updateStatus(`❌ URL export failed: ${error.message}`, 'error');
+        }
+    }
+
+    // Import state from URL parameters
+    importFromURL() {
+        try {
+            const url = new URL(window.location);
+            const compressed = url.searchParams.get('kaldao');
+            
+            if (!compressed) return false;
+            
+            const state = this.decompressState(compressed);
+            if (!state) return false;
+            
+            // Save current state for undo
+            this.app.saveStateForUndo();
+            
+            // Apply loaded state
+            if (state.p) {
+                this.app.parameters.setState(state.p);
+            }
+            if (state.pi !== undefined) {
+                this.app.currentPaletteIndex = state.pi;
+            }
+            if (state.ucp !== undefined) {
+                this.app.useColorPalette = state.ucp === 1;
+            }
+            if (state.ic !== undefined) {
+                this.app.invertColors = state.ic === 1;
+            }
+            
+            this.app.ui.updateDisplay();
+            this.app.ui.updateMenuDisplay();
+            
+            const version = state.v || 'Unknown';
+            this.app.ui.updateStatus(`✅ Loaded from URL! (v${version})`, 'success');
+            
+            return true;
+        } catch (error) {
+            console.error('URL import failed:', error);
+            return false;
+        }
+    }
+
+    // Simple state compression for URL sharing
+    compressState(state) {
+        try {
+            return btoa(JSON.stringify(state));
+        } catch (error) {
+            console.error('Compression failed:', error);
+            return null;
+        }
+    }
+
+    // Simple state decompression for URL sharing
+    decompressState(compressed) {
+        try {
+            return JSON.parse(atob(compressed));
+        } catch (error) {
+            console.error('Decompression failed:', error);
+            return null;
         }
     }
 }

@@ -1,4 +1,4 @@
-// UI management and display updates
+// UI management and display updates with mobile support
 export class UIManager {
     constructor() {
         this.app = null;
@@ -38,9 +38,17 @@ export class UIManager {
         const controls = document.getElementById('controls');
         const ui = document.getElementById('ui');
         
-        if (controls && !this.app.menuVisible) {
-            controls.classList.remove('hidden');
-            ui.classList.remove('hidden');
+        if (!this.app.menuVisible) {
+            // On mobile, only show UI (not controls since they're hidden via CSS)
+            if (ui) {
+                ui.classList.remove('hidden');
+            }
+            
+            // On desktop, show both controls and UI
+            if (controls && !this.app.isMobile) {
+                controls.classList.remove('hidden');
+            }
+            
             this.controlsVisible = true;
             
             // Clear existing timeout
@@ -59,9 +67,17 @@ export class UIManager {
         const controls = document.getElementById('controls');
         const ui = document.getElementById('ui');
         
-        if (controls && !this.app.menuVisible) {
-            controls.classList.add('hidden');
-            ui.classList.add('hidden');
+        if (!this.app.menuVisible) {
+            // Hide UI on both mobile and desktop
+            if (ui) {
+                ui.classList.add('hidden');
+            }
+            
+            // Hide controls on desktop (already hidden on mobile via CSS)
+            if (controls && !this.app.isMobile) {
+                controls.classList.add('hidden');
+            }
+            
             this.controlsVisible = false;
         }
     }
@@ -69,6 +85,41 @@ export class UIManager {
     resetControlsFadeTimer() {
         if (!this.app.menuVisible) {
             this.showControls();
+        }
+    }
+    
+    // Mobile-specific function to handle UI hiding
+    resetMobileUITimer() {
+        if (this.app.isMobile && !this.app.menuVisible) {
+            const ui = document.getElementById('ui');
+            if (ui) {
+                ui.classList.remove('hidden');
+                
+                // Clear existing timeout
+                if (this.controlsFadeTimeout) {
+                    clearTimeout(this.controlsFadeTimeout);
+                }
+                
+                // Only set timeout if user is not currently touching screen
+                if (!this.app.mobile?.userIsCurrentlyTouching) {
+                    this.controlsFadeTimeout = setTimeout(() => {
+                        if (!this.app.menuVisible && !this.app.mobile?.userIsCurrentlyTouching) {
+                            ui.classList.add('hidden');
+                            // Clear status message when UI fades out
+                            this.clearStatusMessage();
+                        }
+                    }, this.CONTROLS_FADE_DELAY);
+                }
+            }
+        }
+    }
+    
+    // Function to clear status message
+    clearStatusMessage() {
+        const statusDiv = document.getElementById('status');
+        if (statusDiv) {
+            statusDiv.textContent = '';
+            statusDiv.className = '';
         }
     }
 
@@ -93,9 +144,8 @@ export class UIManager {
     updateMenuDisplay() {
         if (!this.app.menuVisible) return;
         
-        // Update ALL parameters list with organized categories
-        const allParamsList = document.getElementById('allParametersList');
-        if (allParamsList) {
+        // Generate parameters HTML
+        const generateParametersHTML = () => {
             let paramsHTML = '';
             
             // Movement & Animation
@@ -150,7 +200,19 @@ export class UIManager {
                 paramsHTML += `<div style="${style}">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
-            allParamsList.innerHTML = paramsHTML;
+            return paramsHTML;
+        };
+        
+        // Update desktop parameters list
+        const allParamsList = document.getElementById('allParametersList');
+        if (allParamsList) {
+            allParamsList.innerHTML = generateParametersHTML();
+        }
+        
+        // Update mobile parameters list
+        const allParamsListMobile = document.getElementById('allParametersListMobile');
+        if (allParamsListMobile) {
+            allParamsListMobile.innerHTML = generateParametersHTML();
         }
         
         // Update palettes list

@@ -163,15 +163,20 @@ float modMirror1(inout float p, float size) {
 
 // Smooth kaleidoscope: creates the radial mirror segments you see in the image
 // This takes any point and reflects it into one "slice" of the kaleidoscope
+// Enhanced version that ensures even number of segments for proper mirroring
 float smoothKaleidoscope(inout vec2 p, float sm, float rep) {
     vec2 hp = p;
     vec2 hpp = toPolar(hp);     // Convert to polar coordinates
     
+    // Ensure rep is always even for proper mirroring
+    float evenRep = floor(rep * 0.5) * 2.0;
+    evenRep = max(evenRep, 4.0); // Minimum of 4 segments
+    
     // Apply mirroring to the angle coordinate
-    float rn = modMirror1(hpp.y, 2.0 * PI / rep);   // rep = number of mirror segments
+    float rn = modMirror1(hpp.y, 2.0 * PI / evenRep);   // evenRep = number of mirror segments
     
     // Smooth the sharp edges between segments
-    float sa = PI / rep - pabs(PI / rep - abs(hpp.y), sm);
+    float sa = PI / evenRep - pabs(PI / evenRep - abs(hpp.y), sm);
     hpp.y = sign(hpp.y) * sa;
     
     hp = toRect(hpp);       // Convert back to rectangular coordinates

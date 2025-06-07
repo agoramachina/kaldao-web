@@ -1,4 +1,4 @@
-// Audio system and reactivity module
+// Audio system and reactivity module with modifier-based system
 export class AudioSystem {
     constructor() {
         this.app = null;
@@ -9,7 +9,6 @@ export class AudioSystem {
         this.audioElement = null;
         this.audioReactive = false;
         this.audioPlaying = false;
-        this.baseParameterValues = {};
         
         // Microphone system
         this.microphoneStream = null;
@@ -55,7 +54,7 @@ export class AudioSystem {
                 this.audioElement.pause();
                 this.audioPlaying = false;
                 this.audioReactive = false;
-                this.restoreBaseParameters();
+                this.app.parameters.resetAudioModifiers();
                 this.app.ui.updateStatus('🎵 Audio paused', 'info');
             } else {
                 try {
@@ -67,7 +66,6 @@ export class AudioSystem {
                     await this.audioElement.play();
                     this.audioPlaying = true;
                     this.audioReactive = true;
-                    this.storeBaseParameters();
                     this.app.ui.updateStatus('🎵 Audio playing with reactivity!', 'success');
                 } catch (error) {
                     this.app.ui.updateStatus(`❌ Audio playback failed: ${error.message}`, 'error');
@@ -138,7 +136,6 @@ export class AudioSystem {
                     await this.audioElement.play();
                     this.audioPlaying = true;
                     this.audioReactive = true;
-                    this.storeBaseParameters();
                     this.app.ui.updateStatus(`🎵 Playing: ${file.name} (Reactive mode)`, 'success');
                 } catch (playError) {
                     this.app.ui.updateStatus(`⚠️ Audio loaded but autoplay blocked. Press A to play.`, 'info');
@@ -205,7 +202,6 @@ export class AudioSystem {
             
             this.microphoneActive = true;
             this.audioReactive = true;
-            this.storeBaseParameters();
             
             this.app.ui.updateStatus('🎤 Microphone active with reactivity!', 'success');
             this.app.ui.updateMenuDisplay();
@@ -243,7 +239,7 @@ export class AudioSystem {
             
             this.microphoneActive = false;
             this.audioReactive = false;
-            this.restoreBaseParameters();
+            this.app.parameters.resetAudioModifiers();
             
             this.app.ui.updateStatus('🎤 Microphone stopped', 'info');
             this.app.ui.updateMenuDisplay();
@@ -252,17 +248,6 @@ export class AudioSystem {
             console.error('Error stopping microphone:', error);
             this.app.ui.updateStatus('❌ Error stopping microphone', 'error');
         }
-    }
-
-    storeBaseParameters() {
-        // Store current parameter values as base values for audio reactivity
-        this.baseParameterValues = this.app.parameters.getState();
-    }
-
-    restoreBaseParameters() {
-        // Restore parameters to their base values
-        this.app.parameters.setState(this.baseParameterValues);
-        this.app.ui.updateDisplay();
     }
 
     analyzeAudio() {
@@ -294,55 +279,41 @@ export class AudioSystem {
     }
 
     applyReactivity(parameters) {
-        if (!this.audioReactive || (!this.audioPlaying && !this.microphoneActive)) return;
+        if (!this.audioReactive || (!this.audioPlaying && !this.microphoneActive)) {
+            // Reset all modifiers to 1.0 when not reactive
+            parameters.resetAudioModifiers();
+            return;
+        }
         
         const audioLevels = this.analyzeAudio();
         
-        // Apply audio modulation to parameters (relative to base values)
-        const bassInfluence = audioLevels.bass * 2.0;
-        const midInfluence = audioLevels.mid * 1.5;
-        const trebleInfluence = audioLevels.treble * 1.0;
+        // Create dynamic multipliers based on audio
+        const bassMultiplier = 1.0 + (audioLevels.bass * 0.8);      // 1.0 to 1.8x
+        const midMultiplier = 1.0 + (audioLevels.mid * 0.4);        // 1.0 to 1.4x
+        const trebleMultiplier = 1.0 + (audioLevels.treble * 0.3);  // 1.0 to 1.3x
+        const overallMultiplier = 1.0 + (audioLevels.overall * 0.5); // 1.0 to 1.5x
         
-        // Bass affects truchet radius and zoom
-        if (this.baseParameterValues.truchet_radius !== undefined) {
-            const baseRadius = this.baseParameterValues.truchet_radius;
-            const newValue = baseRadius + (bassInfluence * 0.3);
-            parameters.setValue('truchet_radius', newValue);
-        }
+        // Bass effects - make the center circle really pulse!
+        parameters.setAudioModifier('center_fill_radius', bassMultiplier * 1.5); // Extra bass sensitivity for center
+        parameters.setAudioModifier('truchet_radius', bassMultiplier);
+        parameters.setAudioModifier('zoom_level', 1.0 + (audioLevels.bass * 0.3)); // Slight zoom pulse
         
-        if (this.baseParameterValues.zoom_level !== undefined) {
-            const baseZoom = this.baseParameterValues.zoom_level;
-            const newValue = baseZoom + (bassInfluence * 0.5);
-            parameters.setValue('zoom_level', newValue);
-        }
+        // Mid frequencies affect rotation and movement
+        parameters.setAudioModifier('rotation_speed', midMultiplier);
+        parameters.setAudioModifier('plane_rotation_speed', midMultiplier);
+        parameters.setAudioModifier('fly_speed', 1.0 + (audioLevels.mid * 0.6));
         
-        // Mid frequencies affect rotation speed
-        if (this.baseParameterValues.rotation_speed !== undefined) {
-            const baseRotation = this.baseParameterValues.rotation_speed;
-            const newValue = baseRotation + (midInfluence * 0.1);
-            parameters.setValue('rotation_speed', newValue);
-        }
+        // Treble affects visual complexity and color
+        parameters.setAudioModifier('kaleidoscope_segments', trebleMultiplier);
+        parameters.setAudioModifier('color_intensity', trebleMultiplier);
+        parameters.setAudioModifier('color_speed', trebleMultiplier);
         
-        // Treble affects kaleidoscope segments and color intensity
-        if (this.baseParameterValues.kaleidoscope_segments !== undefined) {
-            const baseSegments = this.baseParameterValues.kaleidoscope_segments;
-            let newSegments = baseSegments + (trebleInfluence * 20.0);
-            newSegments = Math.round(newSegments / 2) * 2; // Keep even
-            parameters.setValue('kaleidoscope_segments', newSegments);
-        }
+        // Overall volume affects contrast and layer count
+        parameters.setAudioModifier('contrast', overallMultiplier);
+        parameters.setAudioModifier('layer_count', 1.0 + (audioLevels.overall * 0.3));
         
-        if (this.baseParameterValues.color_intensity !== undefined) {
-            const baseIntensity = this.baseParameterValues.color_intensity;
-            const newValue = baseIntensity + (trebleInfluence * 0.8);
-            parameters.setValue('color_intensity', newValue);
-        }
-        
-        // Overall volume affects fly speed
-        if (this.baseParameterValues.fly_speed !== undefined) {
-            const baseSpeed = this.baseParameterValues.fly_speed;
-            const newValue = baseSpeed + (audioLevels.overall * 1.0);
-            parameters.setValue('fly_speed', newValue);
-        }
+        // Path effects for more dynamic movement
+        parameters.setAudioModifier('path_scale', 1.0 + (audioLevels.overall * 0.4));
     }
 
     isReactive() {

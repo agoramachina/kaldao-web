@@ -1,4 +1,4 @@
-// Controls and input handling module
+// Controls and input handling module with enhanced features
 export class ControlsManager {
     constructor() {
         this.app = null;
@@ -11,6 +11,9 @@ export class ControlsManager {
 
     setupEventListeners() {
         document.addEventListener('keydown', (e) => this.handleKeydown(e));
+        
+        // Mouse wheel controls for zoom
+        document.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
         
         // Mouse and touch events for showing controls
         document.addEventListener('mousemove', () => this.app.ui.resetControlsFadeTimer());
@@ -26,47 +29,71 @@ export class ControlsManager {
             switch(e.code) {
                 case 'ArrowUp':
                     e.preventDefault();
-                    this.switchParameter(-1);
+                    if (this.app.menuVisible) {
+                        // When menu is open: up/down cycles parameters
+                        this.app.switchParameter(-1);
+                    } else {
+                        // When menu is closed: up/down adjusts values
+                        this.app.adjustParameter(1);
+                    }
                     break;
                 case 'ArrowDown':
                     e.preventDefault();
-                    this.switchParameter(1);
+                    if (this.app.menuVisible) {
+                        // When menu is open: up/down cycles parameters
+                        this.app.switchParameter(1);
+                    } else {
+                        // When menu is closed: up/down adjusts values
+                        this.app.adjustParameter(-1);
+                    }
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
-                    this.adjustParameter(-1);
+                    if (this.app.menuVisible) {
+                        // When menu is open: left/right adjusts values
+                        this.app.adjustParameter(-1);
+                    } else {
+                        // When menu is closed: left/right cycles parameters
+                        this.app.switchParameter(-1);
+                    }
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
-                    this.adjustParameter(1);
+                    if (this.app.menuVisible) {
+                        // When menu is open: left/right adjusts values
+                        this.app.adjustParameter(1);
+                    } else {
+                        // When menu is closed: left/right cycles parameters
+                        this.app.switchParameter(1);
+                    }
                     break;
                 case 'Space':
                     e.preventDefault();
-                    this.togglePause();
+                    this.app.togglePause();
                     break;
                 case 'KeyC':
                     e.preventDefault();
                     if (e.shiftKey) {
-                        this.resetToBlackWhite();
+                        this.app.resetToBlackWhite();
                     } else {
-                        this.randomizeColors();
+                        this.app.randomizeColors();
                     }
                     break;
                 case 'KeyR':
                     e.preventDefault();
                     if (e.shiftKey) {
-                        this.resetAllParameters();
+                        this.app.resetAllParameters();
                     } else {
-                        this.resetCurrentParameter();
+                        this.app.resetCurrentParameter();
                     }
                     break;
                 case 'Period':
                     e.preventDefault();
-                    this.randomizeParameters();
+                    this.app.randomizeParameters();
                     break;
                 case 'KeyI':
                     e.preventDefault();
-                    this.toggleInvertColors();
+                    this.app.toggleInvertColors();
                     break;
                 case 'KeyS':
                     e.preventDefault();
@@ -106,91 +133,29 @@ export class ControlsManager {
         }
     }
 
-    switchParameter(delta) {
-        const paramKeys = this.app.parameters.getParameterKeys();
-        this.app.currentParameterIndex = (this.app.currentParameterIndex + delta + paramKeys.length) % paramKeys.length;
-        this.app.ui.updateDisplay();
-    }
-
-    adjustParameter(delta) {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
+    handleWheel(e) {
+        e.preventDefault();
         
-        const paramKeys = this.app.parameters.getParameterKeys();
-        const paramKey = paramKeys[this.app.currentParameterIndex];
-        this.app.parameters.adjustParameter(paramKey, delta);
-        
-        this.app.ui.updateDisplay();
-    }
-
-    togglePause() {
-        this.app.animationPaused = !this.app.animationPaused;
-        this.app.ui.updateStatus(`Animation: ${this.app.animationPaused ? 'PAUSED' : 'RUNNING'}`, 'info');
-    }
-
-    randomizeColors() {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
-        
-        this.app.parameters.randomizePalette(this.app.currentPaletteIndex);
-        
-        if (this.app.currentPaletteIndex === 0) {
-            this.app.currentPaletteIndex = 1;
-            this.app.useColorPalette = true;
-        }
-        
-        this.app.ui.updateDisplay();
-    }
-
-    resetToBlackWhite() {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
-        
-        this.app.currentPaletteIndex = 0;
-        this.app.useColorPalette = false;
-        this.app.invertColors = false;
-        this.app.ui.updateDisplay();
-    }
-
-    toggleInvertColors() {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
-        
-        this.app.invertColors = !this.app.invertColors;
-        this.app.ui.updateDisplay();
-    }
-
-    randomizeParameters() {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
-        
-        this.app.parameters.randomizeParameters();
-        this.app.ui.updateDisplay();
-    }
-
-    resetCurrentParameter() {
-        // Save current state before making changes
-        this.app.saveStateForUndo();
-        
-        const paramKeys = this.app.parameters.getParameterKeys();
-        const paramKey = paramKeys[this.app.currentParameterIndex];
-        this.app.parameters.resetParameter(paramKey);
-        
-        this.app.ui.updateDisplay();
-    }
-
-    resetAllParameters() {
-        if (confirm('Reset all parameters?')) {
-            // Save current state before making changes
-            this.app.saveStateForUndo();
+        try {
+            this.app.ui.resetControlsFadeTimer();
             
-            this.app.parameters.resetAllParameters();
-            this.app.currentPaletteIndex = 0;
-            this.app.useColorPalette = false;
-            this.app.invertColors = false;
+            // Calculate zoom adjustment based on wheel direction
+            const wheelDelta = e.deltaY > 0 ? -1 : 1; // Invert: wheel up = zoom in
+            const sensitivity = 3; // Adjust sensitivity (higher = more sensitive)
+            const zoomParam = this.app.parameters.getParameter('zoom_level');
+            const zoomAdjustment = wheelDelta * sensitivity * zoomParam.step;
             
+            // Apply zoom adjustment
+            let newZoom = this.app.parameters.getBaseValue('zoom_level') + zoomAdjustment;
+            
+            // Clamp to zoom bounds
+            newZoom = Math.max(zoomParam.min, Math.min(zoomParam.max, newZoom));
+            newZoom = Math.round(newZoom / zoomParam.step) * zoomParam.step;
+            
+            this.app.parameters.setValue('zoom_level', newZoom);
             this.app.ui.updateDisplay();
-            this.app.ui.updateMenuDisplay();
+        } catch (error) {
+            this.app.ui.updateStatus(`Wheel zoom error: ${error.message}`, 'error');
         }
     }
 }

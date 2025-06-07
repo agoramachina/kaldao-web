@@ -1,8 +1,15 @@
 <!DOCTYPE html>
+<!--
+Kaldao Fractal Visualizer v0.3.2
+Interactive WebGL fractal visualizer with real-time parameter control
+
+@agoramachina 2025
+MIT License
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kaldao Fractal Visualizer</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/ui.css">
@@ -39,42 +46,66 @@
 
     <!-- All Parameters Display -->
     <div class="menu hidden" id="menu">
-        <div style="display: flex; gap: 20px; width: 100%;">
-            <div style="flex: 1; min-width: 300px;">
-                <h2 style="color: #4CAF50; margin-bottom: 15px; font-size: 18px;">📊 All Parameters</h2>
-                <div id="allParametersList" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
-            </div>
-            
-            <div style="flex: 1; min-width: 300px;">
-                <h2 style="color: #FFC107; margin-bottom: 15px; font-size: 18px;">🎨 Color & Audio</h2>
-                
-                <div style="margin-bottom: 15px;">
-                    <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Color Palettes</h3>
-                    <div id="allPalettesList" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
+        <!-- Desktop Menu Layout -->
+        <div class="menu-desktop">
+            <div style="display: flex; gap: 20px; width: 100%;">
+                <div style="flex: 1; min-width: 300px;">
+                    <h2 style="color: #4CAF50; margin-bottom: 15px; font-size: 18px;">📊 All Parameters</h2>
+                    <div id="allParametersList" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                    <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Audio Status</h3>
-                    <div id="allAudioStatus" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
-                </div>
-                
-                <div>
-                    <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Quick Controls</h3>
-                    <div style="font-size: 11px; line-height: 1.2;">
-                        <strong>Navigation:</strong> ↑/↓ switch • ←/→ adjust<br>
-                        <strong>Randomize:</strong> C colors • . parameters<br>
-                        <strong>Reset:</strong> R current • Shift+R all<br>
-                        <strong>Audio:</strong> A upload • M microphone<br>
-                        <strong>Files:</strong> S save • L load<br>
-                        <strong>Undo:</strong> Ctrl+Z/Y • Space pause<br>
-                        <strong>Colors:</strong> I invert • Shift+C reset<br>
+                <div style="flex: 1; min-width: 300px;">
+                    <h2 style="color: #FFC107; margin-bottom: 15px; font-size: 18px;">🎨 Color & Audio</h2>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Color Palettes</h3>
+                        <div id="allPalettesList" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Audio Status</h3>
+                        <div id="allAudioStatus" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Quick Controls</h3>
+                        <div style="font-size: 11px; line-height: 1.2;">
+                            <strong>Navigation:</strong> ↑/↓ switch • ←/→ adjust<br>
+                            <strong>Randomize:</strong> C colors • . parameters<br>
+                            <strong>Reset:</strong> R current • Shift+R all<br>
+                            <strong>Audio:</strong> A upload • M microphone<br>
+                            <strong>Files:</strong> S save • L load<br>
+                            <strong>Undo:</strong> Ctrl+Z/Y • Space pause<br>
+                            <strong>Colors:</strong> I invert • Shift+C reset<br>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <div style="text-align: center; margin-top: 15px; opacity: 0.7; font-size: 12px;">
+                ESC to toggle menu • Current parameter highlighted in green<br>
+                Use arrow keys to switch parameters and adjust values
+            </div>
+            <div style="display: flex; justify-content: center; align-items: center; margin-top: 10px; opacity: 0.5; font-size: 10px; color: #888; gap: 15px;">
+                <span id="desktop-version">Kaldao v0.3.2</span>
+            </div>
         </div>
         
-        <div style="text-align: center; margin-top: 15px; opacity: 0.7; font-size: 12px;">
-            Press ESC to close • Current parameter highlighted in green
+        <!-- Mobile Menu Layout -->
+        <div class="menu-mobile">
+            <h2 style="color: #4CAF50; margin-bottom: 15px; font-size: 16px;">📊 All Parameters</h2>
+            <div id="allParametersListMobile" style="font-family: monospace; font-size: 11px; line-height: 1.3;"></div>
+            
+            <div style="text-align: center; margin-top: 15px; opacity: 0.7; font-size: 10px;">
+                Swipe ←→ to change parameters<br>
+                Scroll ↕ to adjust values<br>
+                Pinch to zoom<br>
+                Shake to randomize<br>
+                Tap and hold to reset <br>
+            </div>
+            <div style="text-align: center; margin-top: 8px; opacity: 0.5; font-size: 9px; color: #888;">
+                <span id="mobile-version">Kaldao v0.3.2</span>
+            </div>
         </div>
     </div>
 

@@ -1,4 +1,4 @@
-// WebGL renderer module
+// WebGL renderer module with enhanced features
 export class Renderer {
     constructor() {
         this.gl = null;
@@ -179,9 +179,13 @@ export class Renderer {
                 vec2 hp = p;
                 vec2 hpp = toPolar(hp);
                 
-                float rn = modMirror1(hpp.y, 2.0 * PI / rep);
+                // Ensure rep is always even for proper mirroring
+                float evenRep = floor(rep * 0.5) * 2.0;
+                evenRep = max(evenRep, 4.0); // Minimum of 4 segments
                 
-                float sa = PI / rep - pabs(PI / rep - abs(hpp.y), sm);
+                float rn = modMirror1(hpp.y, 2.0 * PI / evenRep);
+                
+                float sa = PI / evenRep - pabs(PI / evenRep - abs(hpp.y), sm);
                 hpp.y = sign(hpp.y) * sa;
                 
                 hp = toRect(hpp);
@@ -483,7 +487,7 @@ export class Renderer {
         this.gl.uniform1f(this.uniforms.u_plane_rotation_time, parameters.timeAccumulation.plane_rotation_time);
         this.gl.uniform1f(this.uniforms.u_color_time, parameters.timeAccumulation.color_time);
         
-        // Set parameter uniforms
+        // Set parameter uniforms using getValue (which includes audio modifiers)
         parameters.getParameterKeys().forEach(key => {
             const uniformName = `u_${key}`;
             if (this.uniforms[uniformName] !== undefined) {

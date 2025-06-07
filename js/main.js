@@ -5,15 +5,19 @@ import { ControlsManager } from './modules/controls.js';
 import { Renderer } from './modules/renderer.js';
 import { UIManager } from './modules/ui.js';
 import { FileManager } from './modules/fileIO.js';
+import { MobileControls } from './modules/mobile.js';
 
 class KaldaoApp {
     constructor() {
+        this.VERSION = "0.3.2";
+        
         this.parameters = new ParameterManager();
         this.audio = new AudioSystem();
         this.controls = new ControlsManager();
         this.renderer = new Renderer();
         this.ui = new UIManager();
         this.fileManager = new FileManager();
+        this.mobile = new MobileControls();
         
         // Global state
         this.animationPaused = false;
@@ -22,6 +26,9 @@ class KaldaoApp {
         this.useColorPalette = false;
         this.invertColors = false;
         this.menuVisible = false;
+        
+        // Device detection
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         // Undo/Redo system
         this.undoStack = [];
@@ -38,10 +45,18 @@ class KaldaoApp {
             this.audio.init(this);
             this.fileManager.init(this);
             
+            // Initialize mobile controls if on mobile device
+            if (this.isMobile) {
+                this.mobile.init(this);
+            }
+            
             // Set up window resize handler
             window.addEventListener('resize', () => {
                 this.renderer.handleResize();
             });
+            
+            // Update version displays
+            this.updateVersionDisplays();
             
             this.ui.updateStatus('✅ Kaldao loaded successfully!', 'success');
             this.ui.updateDisplay();
@@ -53,6 +68,17 @@ class KaldaoApp {
         } catch (error) {
             this.ui.updateStatus(`❌ Error: ${error.message}`, 'error');
             console.error(error);
+        }
+    }
+    
+    updateVersionDisplays() {
+        const desktopVersion = document.getElementById('desktop-version');
+        if (desktopVersion) {
+            desktopVersion.textContent = `Kaldao v${this.VERSION}`;
+        }
+        const mobileVersion = document.getElementById('mobile-version');
+        if (mobileVersion) {
+            mobileVersion.textContent = `Kaldao v${this.VERSION}`;
         }
     }
     
@@ -85,6 +111,90 @@ class KaldaoApp {
         };
         
         render();
+    }
+    
+    // Parameter control methods
+    switchParameter(delta) {
+        this.currentParameterIndex = (this.currentParameterIndex + delta + this.parameters.getParameterKeys().length) % this.parameters.getParameterKeys().length;
+        this.ui.updateDisplay();
+    }
+    
+    adjustParameter(delta) {
+        this.saveStateForUndo();
+        
+        const paramKeys = this.parameters.getParameterKeys();
+        const paramKey = paramKeys[this.currentParameterIndex];
+        this.parameters.adjustParameter(paramKey, delta);
+        
+        this.ui.updateDisplay();
+    }
+    
+    // Color control methods
+    randomizeColors() {
+        this.saveStateForUndo();
+        this.parameters.randomizePalette(this.currentPaletteIndex);
+        
+        if (this.currentPaletteIndex === 0) {
+            this.currentPaletteIndex = 1;
+            this.useColorPalette = true;
+        }
+        
+        this.ui.updateDisplay();
+    }
+    
+    resetToBlackWhite() {
+        this.saveStateForUndo();
+        
+        this.currentPaletteIndex = 0;
+        this.useColorPalette = false;
+        this.invertColors = false;
+        this.ui.updateDisplay();
+    }
+    
+    toggleInvertColors() {
+        this.saveStateForUndo();
+        
+        this.invertColors = !this.invertColors;
+        this.ui.updateDisplay();
+    }
+    
+    // Parameter reset methods
+    randomizeParameters() {
+        this.saveStateForUndo();
+        this.parameters.randomizeParameters();
+        this.ui.updateDisplay();
+    }
+    
+    resetCurrentParameter() {
+        this.saveStateForUndo();
+        
+        const paramKeys = this.parameters.getParameterKeys();
+        const paramKey = paramKeys[this.currentParameterIndex];
+        this.parameters.resetParameter(paramKey);
+        
+        this.ui.updateDisplay();
+    }
+    
+    resetAllParameters() {
+        if (!this.isMobile && !confirm('Reset all parameters?')) {
+            return;
+        }
+        
+        this.saveStateForUndo();
+        
+        this.parameters.resetAllParameters();
+        this.currentPaletteIndex = 0;
+        this.useColorPalette = false;
+        this.invertColors = false;
+        
+        this.ui.updateDisplay();
+        this.ui.updateMenuDisplay();
+    }
+    
+    // Animation control
+    togglePause() {
+        this.animationPaused = !this.animationPaused;
+        this.ui.updateStatus(`Animation: ${this.animationPaused ? 'PAUSED' : 'RUNNING'}`, 'info');
     }
     
     // State management for undo/redo

@@ -1,4 +1,4 @@
-# Kaldao Fractal Visualizer v0.3.2
+# Kaldao Fractal Visualizer
 
 An interactive fractal visualization application that creates kaleidoscopic patterns with real-time audio reactivity and comprehensive mobile support. Built with WebGL for high-performance rendering.
 

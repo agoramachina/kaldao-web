@@ -1,6 +1,6 @@
 # Kaldao Fractal Visualizer v0.3.2
 
-A powerful, interactive fractal visualization application that creates stunning kaleidoscopic patterns with real-time audio reactivity and comprehensive mobile support. Built with WebGL for high-performance rendering.
+An interactive fractal visualization application that creates kaleidoscopic patterns with real-time audio reactivity and comprehensive mobile support. Built with WebGL for high-performance rendering.
 
 ## 🌟 Features
 
@@ -254,8 +254,8 @@ zoom_level: 0.1-0.5
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-repo/kaldao-fractal.git
-cd kaldao-fractal
+git clone https://github.com/your-repo/kaldao-web.git
+cd kaldao-web
 python -m http.server 8000  # or your preferred server
 ```
 
@@ -268,15 +268,14 @@ python -m http.server 8000  # or your preferred server
 
 ## 📄 License
 
-This project is released under the MIT License. See the original Kaldao implementation for specific terms.
+Kaldao is released under the MIT License. See [Credits](#credits) for other projects' licensing terms.
 
 ## 🙏 Credits
 
-- **Original Kaldao**: Based on the fractal visualizer concept
-- **Shader Mathematics**: Truchet patterns and kaleidoscope algorithms
-- **Color Palettes**: Inspired by Inigo Quilez's palette techniques
-- **Audio Analysis**: Web Audio API with FFT frequency analysis
-- **Mobile UX**: Touch gesture patterns and device integration
+- **Kaleidoscope**: Inspired by dao's [Kaleidoscope](https://godotshaders.com/shader/kaleidoscope/) godot shader
+- **Truchet + Kaleidoscope FTW**: Based on mrange's [Truchet + Kaleidoscope FTW](https://www.shadertoy.com/view/7lKSWW) shader
+- **Color Palettes**: Inigo Quilez's [palette techniques](https://iquilezles.org/www/index.htm)
+- **Mirror Transforms**: mercury's [ModMirror](https://mercury.sexy/hg_sdf/)
 
 ## 📈 Version History
 
@@ -294,6 +293,12 @@ This project is released under the MIT License. See the original Kaldao implemen
 - v0.2.x: Modular architecture and improved rendering
 - v0.1.x: Initial WebGL implementation
 
+## ✅ TODO
+- Live audio monitoring 
+- Full mobile functionality
+- Fix desktop menu
+- Accessibility features
+- Comprehensive roadmap
 ---
 
 **Experience the infinite beauty of mathematical art with real-time audio synchronization across all your devices.** 🌈✨

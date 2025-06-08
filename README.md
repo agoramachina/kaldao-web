@@ -297,6 +297,9 @@ Kaldao is released under the MIT License. See [Credits](#credits) for other proj
 - Live audio monitoring 
 - Full mobile functionality
 - Fix desktop menu
+- True 3D and fractal dimensional shader
+- More parameter fine-tuning
+- Debug mode
 - Accessibility features
 - Comprehensive roadmap
 ---

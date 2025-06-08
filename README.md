@@ -2,6 +2,8 @@
 
 An interactive fractal visualization application that creates kaleidoscopic patterns with real-time audio reactivity and comprehensive mobile support. Built with WebGL for high-performance rendering.
 
+![kaldao-screenshot](assets/screenshots/kaldao-screenshot.png)
+
 ## 🌟 Features
 
 ### Core Visualization

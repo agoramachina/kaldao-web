@@ -1,7 +1,7 @@
 # Kaldao Fractal Visualizer - Recommended File Structure
 
 ```
-kaldao-fractal/
+kaldao-web/
 ├── index.html                 # Main HTML file
 ├── css/
 │   ├── main.css              # Main styles

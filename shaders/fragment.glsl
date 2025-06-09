@@ -324,7 +324,7 @@ vec4 plane(vec3 ro, vec3 rd, vec3 pp, vec3 off, float aa, float n) {
     
     // Calculate transparency (alpha) for this layer
     float t = smoothstep(aa, -aa, -d3.y - 3.0 * lw) *
-             mix(0.5, 1.0, smoothstep(aa, -aa, -d3.y - lw));
+        mix(0.5, 1.0, smoothstep(aa, -aa, -d3.y - lw));
     
     // Cut out areas outside the main circle
     col = mix(col, vec3(0.01), d3.y <= 0.0 ? 1.0 : 0.0);

@@ -8,15 +8,6 @@ export class DebugUIManager {
         this.currentDebugParameterIndex = 0;
         this.allDebugKeys = []; // Flattened list of all debug parameter keys for navigation
         this.parameterModificationCount = 0; // Track how many debug params have been modified
-        
-        // ENHANCEMENT: Better interaction state management
-        this.isKeyboardNavigating = false;    // Track if user is currently using keyboard navigation
-        this.keyboardNavigationTimeout = null; // Timeout to reset keyboard navigation state
-        this.performanceMetrics = {           // Track performance for FPS display
-            frameCount: 0,
-            lastFrameTime: performance.now(),
-            fps: 60
-        };
     }
 
     init(app) {
@@ -75,23 +66,9 @@ export class DebugUIManager {
     }
 
     // Navigate through debug parameters
-    // ENHANCED: Better state management to prevent hover conflicts during keyboard navigation
+    // Delta of -1 moves up, +1 moves down through the parameter list
     switchDebugParameter(delta) {
         if (this.allDebugKeys.length === 0) return;
-        
-        // ENHANCEMENT: Mark that we're currently using keyboard navigation
-        // This prevents hover animations from interfering with keyboard selection
-        this.isKeyboardNavigating = true;
-        
-        // Clear any existing timeout and set a new one
-        if (this.keyboardNavigationTimeout) {
-            clearTimeout(this.keyboardNavigationTimeout);
-        }
-        
-        // Reset keyboard navigation state after a brief delay
-        this.keyboardNavigationTimeout = setTimeout(() => {
-            this.isKeyboardNavigating = false;
-        }, 200); // 200ms delay before allowing hover animations again
         
         // Wrap around at the ends of the list for continuous navigation
         this.currentDebugParameterIndex = (this.currentDebugParameterIndex + delta + this.allDebugKeys.length) % this.allDebugKeys.length;
@@ -134,7 +111,6 @@ export class DebugUIManager {
     }
 
     // ENHANCEMENT: Set up mouse interaction for parameter selection and editing
-    // IMPROVED: Better event handling to prevent menu closure and enhance user experience
     setupMouseInteraction() {
         const parameterLines = document.querySelectorAll('.debug-param-line[data-param-key]');
         
@@ -142,42 +118,18 @@ export class DebugUIManager {
             const paramKey = line.getAttribute('data-param-key');
             const paramType = line.getAttribute('data-param-type');
             
-            // ENHANCEMENT: Prevent hover effects during keyboard navigation
-            line.addEventListener('mouseenter', (e) => {
-                if (this.isKeyboardNavigating) {
-                    e.preventDefault();
-                    return;
-                }
-                // Allow normal hover effects when not keyboard navigating
-            });
-            
-            // ENHANCEMENT: Click to select parameter (improved event handling)
+            // Click to select parameter
             line.addEventListener('click', (e) => {
                 e.preventDefault();
-                e.stopPropagation(); // FIXED: Prevent event bubbling that was closing the menu
                 this.selectParameterByKey(paramKey, paramType);
             });
             
-            // ENHANCEMENT: Double-click to edit parameter value with visual feedback
+            // Double-click to edit parameter value
             line.addEventListener('dblclick', (e) => {
                 e.preventDefault();
-                e.stopPropagation(); // FIXED: Prevent event bubbling
                 this.editParameterValue(paramKey, line);
             });
         });
-        
-        // ENHANCEMENT: Add click handler to the main debug menu to prevent accidental closure
-        const debugMenu = document.getElementById('debugMenu');
-        if (debugMenu) {
-            debugMenu.addEventListener('click', (e) => {
-                // Only allow menu closure from specific elements, not general clicks
-                if (e.target === debugMenu) {
-                    // Clicked on the background - could close menu here if desired
-                    // For now, we prevent accidental closure
-                    e.stopPropagation();
-                }
-            });
-        }
     }
     
     // ENHANCEMENT: Select a parameter by its key (for mouse interaction)
@@ -205,27 +157,14 @@ export class DebugUIManager {
         }
     }
     
-    // ENHANCEMENT: Direct editing of parameter values with improved visual feedback
-    // IMPROVED: Better user experience with clear visual indication of editable state
+    // ENHANCEMENT: Direct editing of parameter values
     editParameterValue(paramKey, lineElement) {
         const param = this.app.parameters.getParameter(paramKey);
         if (!param) return;
         
         const currentValue = param.value;
         
-        // Create enhanced inline editor with clear visual feedback
-        const inputContainer = document.createElement('div');
-        inputContainer.style.cssText = `
-            display: inline-flex;
-            align-items: center;
-            background: linear-gradient(90deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.1) 100%);
-            border: 2px solid #4CAF50;
-            border-radius: 4px;
-            padding: 2px 6px;
-            margin-left: 10px;
-            animation: editHighlight 0.3s ease;
-        `;
-        
+        // Create inline editor
         const input = document.createElement('input');
         input.type = 'number';
         input.value = currentValue;
@@ -233,42 +172,30 @@ export class DebugUIManager {
         input.max = param.max;
         input.step = param.step;
         input.style.cssText = `
-            background: transparent;
-            border: none;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
             color: #ffffff;
             font-family: 'Courier New', monospace;
             font-size: 11px;
-            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 2px;
             width: 80px;
-            outline: none;
+            margin-left: 10px;
         `;
-        
-        // Add visual indicator that this is editable
-        const indicator = document.createElement('span');
-        indicator.textContent = '✎';
-        indicator.style.cssText = `
-            color: #4CAF50;
-            margin-left: 4px;
-            font-size: 10px;
-            animation: editBlink 1s infinite;
-        `;
-        
-        inputContainer.appendChild(input);
-        inputContainer.appendChild(indicator);
         
         // Save reference to original content
         const originalContent = lineElement.innerHTML;
         
-        // Replace line content with enhanced editor
+        // Replace line content with editor
         const paramName = param.name.padEnd(26);
         lineElement.innerHTML = `${paramName}: `;
-        lineElement.appendChild(inputContainer);
+        lineElement.appendChild(input);
         
         // Focus and select all text
         input.focus();
         input.select();
         
-        // Enhanced completion handling with better feedback
+        // Handle editing completion
         const finishEdit = () => {
             const newValue = parseFloat(input.value);
             
@@ -283,26 +210,15 @@ export class DebugUIManager {
                 this.updateDebugMenuDisplay();
                 this.app.ui.updateDisplay();
                 
-                // Enhanced success feedback
-                this.app.ui.updateStatus(`${param.name} set to ${newValue.toFixed(3)} ✓`, 'success');
-                
-                // Brief highlight animation for the updated parameter
-                setTimeout(() => {
-                    const updatedLine = document.querySelector(`[data-param-key="${paramKey}"]`);
-                    if (updatedLine) {
-                        updatedLine.style.animation = 'parameter-highlight 0.5s ease';
-                    }
-                }, 100);
-                
+                this.app.ui.updateStatus(`${param.name} set to ${newValue.toFixed(3)}`, 'success');
             } else {
-                // Enhanced error feedback with specific guidance
+                // Invalid value, revert
                 lineElement.innerHTML = originalContent;
-                const rangeInfo = `(range: ${param.min} to ${param.max})`;
-                this.app.ui.updateStatus(`Invalid value for ${param.name} ${rangeInfo}`, 'error');
+                this.app.ui.updateStatus(`Invalid value for ${param.name} (range: ${param.min} to ${param.max})`, 'error');
             }
         };
         
-        // Enhanced keyboard event handling
+        // Handle keyboard events
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -310,18 +226,11 @@ export class DebugUIManager {
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 lineElement.innerHTML = originalContent;
-                this.app.ui.updateStatus('Edit cancelled', 'info');
-            } else if (e.key === 'Tab') {
-                e.preventDefault();
-                finishEdit();
-                // Could implement tab navigation to next parameter here
             }
         });
         
-        // Handle focus loss with delay to allow for proper interaction
-        input.addEventListener('blur', () => {
-            setTimeout(finishEdit, 100);
-        });
+        // Handle focus loss
+        input.addEventListener('blur', finishEdit);
     }
     
     // ENHANCEMENT: Get currently selected parameter key (works for both artistic and debug)
@@ -596,66 +505,22 @@ export class DebugUIManager {
         return true;
     }
 
-    // ENHANCEMENT: Update system status with real-time performance monitoring
-    updateSystemStatus() {
-        const systemStatusDiv = document.getElementById('debugSystemStatus');
-        if (!systemStatusDiv) return;
+    // Get statistics about current debug parameter state
+    getDebugStatistics() {
+        const stats = {
+            totalParameters: this.allDebugKeys.length,
+            modifiedParameters: 0,
+            categories: Object.keys(this.app.parameters.getDebugParameterCategories()).length
+        };
         
-        // Calculate current FPS based on recent frame timings
-        const currentTime = performance.now();
-        const deltaTime = currentTime - this.performanceMetrics.lastFrameTime;
-        this.performanceMetrics.lastFrameTime = currentTime;
-        this.performanceMetrics.frameCount++;
+        // Count how many parameters have been changed from defaults
+        // This helps users understand how much they've customized the system
+        this.allDebugKeys.forEach(key => {
+            const param = this.app.parameters.getParameter(key);
+            // We'd need to compare against default values to determine if modified
+            // For now, just return the counts we have
+        });
         
-        // Calculate rolling average FPS for smooth display
-        if (deltaTime > 0) {
-            const instantFPS = 1000 / deltaTime;
-            this.performanceMetrics.fps = this.performanceMetrics.fps * 0.9 + instantFPS * 0.1; // Smooth rolling average
-        }
-        
-        // Get system information
-        const systemInfo = this.app.getSystemStatus();
-        const fps = Math.round(this.performanceMetrics.fps);
-        
-        // Determine performance status
-        let performanceStatus = '';
-        let performanceColor = '#4CAF50';
-        if (fps >= 55) {
-            performanceStatus = 'Excellent';
-            performanceColor = '#4CAF50';
-        } else if (fps >= 45) {
-            performanceStatus = 'Good';
-            performanceColor = '#FFC107';
-        } else if (fps >= 30) {
-            performanceStatus = 'Fair';
-            performanceColor = '#FF9800';
-        } else {
-            performanceStatus = 'Poor';
-            performanceColor = '#f44336';
-        }
-        
-        // Update the system status display with comprehensive information
-        systemStatusDiv.innerHTML = `
-            <div style="margin-bottom: 8px;">
-                <strong style="color: ${performanceColor};">FPS: ${fps}</strong> 
-                <span style="color: #cccccc;">(${performanceStatus})</span>
-            </div>
-            <div style="font-size: 10px; color: #999999;">
-                <div>Parameters: ${systemInfo.totalParameters} total</div>
-                <div>Debug Changes: ${this.parameterModificationCount}</div>
-                <div>Audio: ${systemInfo.audioReactive ? 'Reactive' : 'Static'}</div>
-                <div>Frames: ${this.performanceMetrics.frameCount}</div>
-            </div>
-        `;
-    }
-    
-    // ENHANCEMENT: Call this method regularly to update FPS display
-    startPerformanceMonitoring() {
-        // Update system status every 100ms for responsive feedback
-        setInterval(() => {
-            if (this.app.debugMenuVisible) {
-                this.updateSystemStatus();
-            }
-        }, 100);
+        return stats;
     }
 }

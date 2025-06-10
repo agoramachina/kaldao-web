@@ -79,7 +79,6 @@
  * The parameter list container creates an organized, scannable view of all
  * mathematical parameters. The design supports both detailed examination of
  * individual parameters and rapid navigation through the complete parameter space.
- * ENHANCED: Better proportions and scrolling behavior
  */
 #debugParametersList {
     font-family: 'Courier New', monospace;  /* Monospace ensures perfect alignment */
@@ -87,12 +86,9 @@
     line-height: 1.4;                       /* Comfortable reading without waste */
     letter-spacing: 0.5px;                  /* Improve readability at small sizes */
     
-    /* IMPROVED: Better scrolling behavior and proportions */
+    /* Scrolling behavior for parameter lists longer than viewport */
     max-height: calc(90vh - 100px);          /* Leave room for headers and controls */
-    overflow-y: auto;                        /* Enable vertical scrolling when needed */
-    overflow-x: hidden;                      /* Prevent horizontal scrollbar completely */
-    width: 100%;                             /* Use full available width */
-    word-wrap: break-word;                   /* Prevent text from causing horizontal overflow */
+    overflow-y: auto;                        /* Enable scrolling when needed */
     
     /* Custom scrollbar styling for professional appearance */
     scrollbar-width: thin;                   /* Firefox */
@@ -150,7 +146,7 @@
 /*
  * Individual parameter lines create the core interaction surface for mathematical exploration.
  * The design supports rapid scanning, precise value reading, and clear indication of
- * the currently selected parameter with improved mouse interaction.
+ * the currently selected parameter.
  */
 .debug-param-line {
     font-family: 'Courier New', monospace !important;
@@ -165,11 +161,11 @@
     /* Preserve formatting for perfect parameter value alignment */
     white-space: pre !important;
     
-    /* IMPROVED: Faster transitions to reduce animation conflicts */
-    transition: background-color 0.1s ease, border-left-color 0.1s ease;
+    /* Smooth transitions for selection feedback */
+    transition: all 0.15s ease;
     
-    /* Interactive feedback */
-    cursor: pointer;                         /* IMPROVED: Show that lines are clickable */
+    /* Subtle interactive feedback */
+    cursor: default;
 }
 
 /*
@@ -213,7 +209,6 @@
 /*
  * Control section containers create organized information zones within the debug interface.
  * Each section serves a specific function in the mathematical exploration workflow.
- * IMPROVED: Better typography for enhanced readability.
  */
 .debug-controls-section {
     background: linear-gradient(135deg, 
@@ -224,28 +219,11 @@
     padding: 12px;
     margin-bottom: 15px;
     
-    /* IMPROVED: Enhanced typography for control sections */
-    font-size: 11px;                        /* Slightly larger base font */
-    line-height: 1.4;                       /* Better line spacing */
-    
     /* Subtle depth effect */
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     
     /* Smooth hover interaction for better user experience */
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-/* IMPROVED: Better typography for section headers */
-.debug-controls-section h3 {
-    font-size: 13px !important;             /* Larger headers for better hierarchy */
-    margin-bottom: 10px !important;
-    letter-spacing: 0.5px;                  /* Improved readability */
-}
-
-/* IMPROVED: Better typography for section content */
-.debug-controls-section div {
-    font-size: 11px !important;             /* Consistent larger font throughout */
-    line-height: 1.4 !important;
 }
 
 .debug-controls-section:hover {
@@ -258,8 +236,8 @@
  * the mathematical parameter currently being examined or modified.
  */
 #debugCurrentParamInfo {
-    font-size: 12px !important;             /* IMPROVED: Larger font for better readability */
-    line-height: 1.4 !important;            /* IMPROVED: More comfortable line spacing */
+    font-size: 10px !important;
+    line-height: 1.3 !important;
     color: #ffffff;
     
     /* Enhanced readability for detailed parameter descriptions */
@@ -417,7 +395,6 @@
 /*
  * Subtle animations provide feedback and create professional polish
  * without distracting from mathematical exploration work
- * ENHANCED: Added animations for edit mode and parameter highlighting
  */
 @keyframes gentle-pulse {
     0%, 100% { opacity: 1; }
@@ -428,28 +405,6 @@
     0% { background-color: rgba(76, 175, 80, 0.0); }
     50% { background-color: rgba(76, 175, 80, 0.3); }
     100% { background-color: rgba(76, 175, 80, 0.15); }
-}
-
-/* ENHANCEMENT: Animation for edit mode visual feedback */
-@keyframes editHighlight {
-    0% { 
-        transform: scale(1.0);
-        box-shadow: 0 0 0 rgba(76, 175, 80, 0.0);
-    }
-    50% { 
-        transform: scale(1.02);
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
-    }
-    100% { 
-        transform: scale(1.0);
-        box-shadow: 0 0 4px rgba(76, 175, 80, 0.2);
-    }
-}
-
-/* ENHANCEMENT: Blinking indicator for edit mode */
-@keyframes editBlink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0.3; }
 }
 
 /*
@@ -463,19 +418,12 @@
 
 /*
  * Hover states for mouse-based mathematical exploration
- * IMPROVED: Subtle feedback that doesn't conflict with keyboard navigation
+ * Subtle feedback helps users understand interactive elements
  */
 .debug-param-line:hover:not(.debug-param-current) {
-    background: rgba(255, 255, 255, 0.03);  /* IMPROVED: More subtle hover effect */
-    border-left: 1px solid rgba(255, 255, 255, 0.1); /* IMPROVED: Thinner, subtler border */
-    /* REMOVED: transform to prevent animation conflicts */
-}
-
-/* IMPROVED: Ensure current parameter highlighting always takes priority over hover */
-.debug-param-current:hover {
-    background: linear-gradient(90deg, 
-        rgba(76, 175, 80, 0.15) 0%, 
-        rgba(76, 175, 80, 0.08) 100%) !important;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 2px solid rgba(255, 255, 255, 0.2);
+    transform: translateX(1px);
 }
 
 /* ==========================================================================
@@ -561,7 +509,7 @@
 }
 
 /* ==========================================================================
-   PRINT STYLES FOR MATHEMATICAL DOCUMENTATION
+    PRINT STYLES FOR MATHEMATICAL DOCUMENTATION
    ========================================================================== */
 
 /*

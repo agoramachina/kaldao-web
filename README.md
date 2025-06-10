@@ -278,7 +278,7 @@ Kaldao is released under the MIT License. See [Credits](#credits) for other proj
 - **Truchet + Kaleidoscope FTW**: Based on mrange's [Truchet + Kaleidoscope FTW](https://www.shadertoy.com/view/7lKSWW) shader
 - **Color Palettes**: Inigo Quilez's [palette techniques](https://iquilezles.org/www/index.htm)
 - **Mirror Transforms**: mercury's [ModMirror](https://mercury.sexy/hg_sdf/)
-
+- **Development Support**: Claude AI for coding assistance and architecture guidance
 ## 📈 Version History
 
 ### v0.3.2 (Current)

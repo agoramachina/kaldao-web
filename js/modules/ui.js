@@ -156,7 +156,7 @@ export class UIManager {
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
                 const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div style="${style}">${param.name}: ${param.value.toFixed(3)}</div>`;
+                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
             paramsHTML += '<br>';
@@ -171,7 +171,7 @@ export class UIManager {
                 const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
                 const value = key === 'kaleidoscope_segments' || key === 'layer_count' ? 
                     param.value.toFixed(0) : param.value.toFixed(3);
-                paramsHTML += `<div style="${style}">${param.name}: ${value}</div>`;
+                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${value}</div>`;
             });
             
             paramsHTML += '<br>';
@@ -184,7 +184,7 @@ export class UIManager {
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
                 const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div style="${style}">${param.name}: ${param.value.toFixed(3)}</div>`;
+                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
             paramsHTML += '<br>';
@@ -197,7 +197,7 @@ export class UIManager {
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
                 const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div style="${style}">${param.name}: ${param.value.toFixed(3)}</div>`;
+                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
             return paramsHTML;
@@ -207,12 +207,14 @@ export class UIManager {
         const allParamsList = document.getElementById('allParametersList');
         if (allParamsList) {
             allParamsList.innerHTML = generateParametersHTML();
+            this.setupArtisticParameterInteraction();
         }
         
         // Update mobile parameters list
         const allParamsListMobile = document.getElementById('allParametersListMobile');
         if (allParamsListMobile) {
             allParamsListMobile.innerHTML = generateParametersHTML();
+            this.setupArtisticParameterInteraction();
         }
         
         // Update palettes list
@@ -243,5 +245,104 @@ export class UIManager {
                 allAudioStatus.innerHTML = `🎵 File: ${playStatus}<br>🎤 Microphone: OFF<br>🔊 Audio Reactive: ${reactiveStatus}<br><em>Press A to toggle, M for mic</em>`;
             }
         }
+    }
+
+    // Set up click interaction for artistic parameters
+    setupArtisticParameterInteraction() {
+        const parameterLines = document.querySelectorAll('.artistic-param-line[data-param-key]');
+        
+        parameterLines.forEach(line => {
+            const paramKey = line.getAttribute('data-param-key');
+            
+            // Click to edit parameter value
+            line.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent menu from closing
+                this.editArtisticParameterValue(paramKey, line);
+            });
+        });
+    }
+
+    // Edit artistic parameter value inline
+    editArtisticParameterValue(paramKey, lineElement) {
+        const param = this.app.parameters.getParameter(paramKey);
+        if (!param) return;
+        
+        const currentValue = param.value;
+        
+        // Create inline editor
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = currentValue;
+        input.min = param.min;
+        input.max = param.max;
+        input.step = param.step;
+        input.style.cssText = `
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 2px 4px;
+            border-radius: 2px;
+            width: 80px;
+            margin-left: 10px;
+        `;
+        
+        // Save reference to original content
+        const originalContent = lineElement.innerHTML;
+        
+        // Replace line content with editor
+        const paramName = param.name;
+        lineElement.innerHTML = `${paramName}: `;
+        lineElement.appendChild(input);
+        
+        // Focus and select all text
+        input.focus();
+        input.select();
+        
+        // Handle editing completion
+        const finishEdit = () => {
+            const newValue = parseFloat(input.value);
+            
+            if (!isNaN(newValue) && newValue >= param.min && newValue <= param.max) {
+                // Save state for undo
+                this.app.saveStateForUndo();
+                
+                // Update parameter value
+                this.app.parameters.setValue(paramKey, newValue);
+                
+                // Update current parameter index to match edited parameter
+                const index = this.app.parameters.getParameterKeys().indexOf(paramKey);
+                if (index !== -1) {
+                    this.app.currentParameterIndex = index;
+                }
+                
+                // Update displays
+                this.updateDisplay();
+                this.updateMenuDisplay();
+                
+                this.updateStatus(`${param.name} set to ${newValue.toFixed(3)}`, 'success');
+            } else {
+                // Invalid value, revert
+                lineElement.innerHTML = originalContent;
+                this.updateStatus(`Invalid value for ${param.name} (range: ${param.min} to ${param.max})`, 'error');
+            }
+        };
+        
+        // Handle keyboard events
+        input.addEventListener('keydown', (e) => {
+            e.stopPropagation(); // Prevent app key handlers from interfering
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                finishEdit();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                lineElement.innerHTML = originalContent;
+            }
+        });
+        
+        // Handle focus loss
+        input.addEventListener('blur', finishEdit);
     }
 }

@@ -46,6 +46,7 @@ class KaldaoApp {
         
         // NEW: Mathematical exploration state
         // This represents a parallel interface state for deep parameter exploration
+        this.debugMode = false;                       // Whether we're in debug mode (separate from menu visibility)
         this.debugMenuVisible = false;                // Whether mathematical parameter interface is active
         this.debugSessionStartTime = 0;               // When current debug session began (for analytics)
         this.debugParameterChangeCount = 0;           // How many mathematical changes made this session

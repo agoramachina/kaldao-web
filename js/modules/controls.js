@@ -57,7 +57,7 @@ export class ControlsManager {
             // CONTEXT-SENSITIVE KEY ROUTING
             // This is the heart of our dual-mode system - we route the same physical keys
             // to different logical functions based on the current operational context
-            if (this.app.debugMenuVisible) {
+            if (this.app.debugMode) {
                 // DEBUG MODE: Route keys to mathematical parameter control
                 this.handleDebugModeKeys(e);
             } else {
@@ -172,9 +172,9 @@ export class ControlsManager {
                 this.app.audio.toggleMicrophone();
                 break;
                 
-            case 'Semicolon':  // THE DEBUG MODE GATEWAY
+            case 'Semicolon':  // THE DEBUG MODE TOGGLE
                 e.preventDefault();
-                this.enterDebugMode();
+                this.toggleDebugMode();
                 break;
         }
     }
@@ -264,7 +264,11 @@ export class ControlsManager {
                 break;
                 
             case 'Escape':
-            case 'Semicolon':  // EITHER KEY EXITS DEBUG MODE
+                e.preventDefault();
+                this.app.debugUI.toggleDebugMenu();
+                break;
+                
+            case 'Semicolon':  // SEMICOLON EXITS DEBUG MODE
                 e.preventDefault();
                 this.exitDebugMode();
                 break;
@@ -296,20 +300,41 @@ export class ControlsManager {
     // DEBUG MODE TRANSITION METHODS
     // These handle the conceptual and visual transition between operational modes
     
+    toggleDebugMode() {
+        if (this.app.debugMode) {
+            this.exitDebugMode();
+        } else {
+            this.enterDebugMode();
+        }
+    }
+    
     enterDebugMode() {
         this.lastModeSwitch = performance.now();
-        this.app.debugUI.toggleDebugMenu();
+        this.app.debugMode = true;
+        
+        // Close any open menus when entering debug mode
+        if (this.app.menuVisible) {
+            this.app.ui.toggleMenu();
+        }
+        if (this.app.debugMenuVisible) {
+            this.app.debugUI.toggleDebugMenu();
+        }
         
         // Provide clear feedback about the mode transition
         // This helps users understand they've entered a different operational context
-        this.app.ui.updateStatus('🔧 DEBUG MODE: Mathematical parameter control active. Press ; or ESC to exit.', 'info');
+        this.app.ui.updateStatus('🔧 DEBUG MODE: Mathematical parameter control active. Press ESC for debug menu, ; to exit.', 'info');
         
         console.log('Entered debug mode - mathematical parameter control active');
     }
     
     exitDebugMode() {
         this.lastModeSwitch = performance.now();
-        this.app.debugUI.toggleDebugMenu();
+        this.app.debugMode = false;
+        
+        // Close debug menu if it's open
+        if (this.app.debugMenuVisible) {
+            this.app.debugUI.toggleDebugMenu();
+        }
         
         // Calculate how long the user spent in debug mode for analytics
         const debugDuration = this.lastModeSwitch - (this.lastModeSwitch - 1000); // Simplified for example
@@ -350,7 +375,7 @@ export class ControlsManager {
     handleWheelInteraction() {
         // Handle mouse wheel events for potential future enhancement
         // Could be used for fine parameter adjustment in debug mode
-        if (this.app.debugMenuVisible) {
+        if (this.app.debugMode) {
             // Future: Could implement wheel-based parameter adjustment
             // For now, just reset the UI timer
             this.app.ui.resetControlsFadeTimer();

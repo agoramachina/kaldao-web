@@ -13,22 +13,24 @@ export class DebugUIManager {
     init(app) {
         this.app = app;
         this.buildDebugParameterList();
-        console.log('Debug UI Manager initialized with', this.allDebugKeys.length, 'debug parameters');
+        console.log('Debug UI Manager initialized with', this.allDebugKeys.length, 'total parameters (artistic + debug)');
     }
 
-    // Build a flat list of debug parameter keys for navigation
+    // Build a flat list of ALL parameter keys for navigation (artistic + debug)
     // This creates a single array we can navigate through with arrow keys
     buildDebugParameterList() {
-        const categories = this.app.parameters.getDebugParameterCategories();
         this.allDebugKeys = [];
         
-        // Flatten all debug parameters while maintaining category order
-        // This gives us predictable navigation through related parameters
+        // Start with artistic parameters for easy access
+        this.allDebugKeys.push(...this.app.parameters.getParameterKeys());
+        
+        // Add debug parameters organized by category
+        const categories = this.app.parameters.getDebugParameterCategories();
         Object.keys(categories).forEach(categoryName => {
             this.allDebugKeys.push(...categories[categoryName]);
         });
 
-        console.log('Debug parameter navigation order:', this.allDebugKeys);
+        console.log('Debug parameter navigation order (artistic + debug):', this.allDebugKeys);
     }
 
     // Toggle debug menu visibility

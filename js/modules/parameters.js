@@ -203,6 +203,10 @@ export class ParameterManager {
             color_time: 0.0            // Time for color palette cycling
         };
 
+        // Audio modifiers system - non-destructive parameter modification
+        // These store temporary audio-reactive adjustments that are applied on top of base parameter values
+        this.audioModifiers = {};
+
         // Color palette system (unchanged)
         // These define the mathematical coefficients for procedural color generation
         this.colorPalettes = [
@@ -265,7 +269,15 @@ export class ParameterManager {
 
     getValue(key) {
         const param = this.getParameter(key);
-        return param?.value ?? 0;
+        const baseValue = param?.value ?? 0;
+        
+        // Apply audio modifier if present (non-destructive)
+        const audioModifier = this.audioModifiers[key];
+        if (audioModifier !== undefined) {
+            return audioModifier;
+        }
+        
+        return baseValue;
     }
 
     setValue(key, value) {
@@ -460,5 +472,25 @@ export class ParameterManager {
                 palette.d[i] = Math.random();
             }
         }
+    }
+
+    // Audio modifiers system - for audio-reactive parameter control
+    setAudioModifier(key, value) {
+        // Only allow audio modifiers for parameters that exist
+        if (this.getParameter(key)) {
+            this.audioModifiers[key] = value;
+        }
+    }
+
+    resetAudioModifiers() {
+        this.audioModifiers = {};
+    }
+
+    getAudioModifier(key) {
+        return this.audioModifiers[key];
+    }
+
+    hasAudioModifier(key) {
+        return this.audioModifiers[key] !== undefined;
     }
 }

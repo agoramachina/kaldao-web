@@ -119,6 +119,51 @@ Mathematical constants exposed from shader:
 - JavaScript parameter `fly_speed` → Shader uniform `u_fly_speed`
 - Automatic mapping eliminates manual synchronization
 
+## Controls Reference
+
+### Desktop Controls
+
+| Keyboard shortcut | Description |
+|-------------------|-------------|
+| `↑` `↓` | Switch parameter (menu closed) / Navigate list (menu open) |
+| `←` `→` | Adjust value (menu closed) / Navigate list (menu open) |
+| `Mouse Wheel` | Zoom in/out |
+| `ESC` | Toggle main menu |
+| `Space` | Pause/resume animation |
+| `R` | Reset current parameter |
+| `Shift` + `R` | Reset all parameters (with confirmation) |
+| `.` | Randomize parameters |
+| `C` | Randomize colors |
+| `Shift` + `C` | Reset to black & white |
+| `I` | Invert colors |
+| `A` | Upload audio file / toggle playback |
+| `M` | Toggle microphone |
+| `Ctrl` + `S` | Save parameters |
+| `Ctrl` + `L` | Load parameters |
+| `Ctrl` + `Z` / `Y` | Undo/redo |
+| `;` | Toggle debug mode (mathematical exploration) |
+
+#### Debug Mode Only
+| Keyboard shortcut | Description |
+|-------------------|-------------|
+| `E` | Export debug state to clipboard |
+| `D` | Show debug system statistics |
+| `H` | Show debug mode help |
+| `.` | Safe randomization of debug parameters |
+
+### Mobile Controls
+
+| Gesture | Description |
+|---------|-------------|
+| Swipe left/right | Switch parameters |
+| Vertical drag | Adjust parameter value (fader-style) |
+| Pinch | Zoom in/out |
+| Single tap | Toggle menu |
+| Long press (2s) | Reset all parameters |
+| Two-finger tap | Randomize colors |
+| Shake device | Randomize parameters |
+| Device tilt | Camera control (X/Y axes) |
+
 ## Development Workflow
 
 1. **Edit Code**: Modify JS modules or shaders directly

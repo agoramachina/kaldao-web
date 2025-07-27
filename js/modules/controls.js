@@ -419,6 +419,17 @@ export class ControlsManager {
     togglePause() {
         this.app.animationPaused = !this.app.animationPaused;
         
+        // Pause/resume audio along with animation
+        if (this.app.audio.audioElement && this.app.audio.audioPlaying) {
+            if (this.app.animationPaused) {
+                this.app.audio.audioElement.pause();
+            } else {
+                this.app.audio.audioElement.play().catch(error => {
+                    console.warn('Audio resume failed:', error);
+                });
+            }
+        }
+        
         // Enhanced status message that includes current mode context
         const status = this.app.animationPaused ? 'PAUSED' : 'RUNNING';
         const mode = this.app.debugMenuVisible ? ' (Debug Mode)' : ' (Normal Mode)';

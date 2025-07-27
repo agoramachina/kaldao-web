@@ -304,7 +304,9 @@ export class AudioSystem {
         parameters.setAudioModifier('fly_speed', parameters.getBaseValue('fly_speed') * (1.0 + (audioLevels.mid * 0.6)));
         
         // Treble affects visual complexity and color
-        parameters.setAudioModifier('kaleidoscope_segments', parameters.getBaseValue('kaleidoscope_segments') * trebleMultiplier);
+        const kaleidoscopeValue = parameters.getBaseValue('kaleidoscope_segments') * trebleMultiplier;
+        // Ensure kaleidoscope segments remain even (required for proper symmetry)
+        parameters.setAudioModifier('kaleidoscope_segments', Math.round(kaleidoscopeValue / 2) * 2);
         parameters.setAudioModifier('color_intensity', parameters.getBaseValue('color_intensity') * trebleMultiplier);
         parameters.setAudioModifier('color_speed', parameters.getBaseValue('color_speed') * trebleMultiplier);
         

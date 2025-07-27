@@ -280,6 +280,12 @@ export class ParameterManager {
         return baseValue;
     }
 
+    getBaseValue(key) {
+        // Always returns the base parameter value, ignoring audio modifiers
+        const param = this.getParameter(key);
+        return param?.value ?? 0;
+    }
+
     setValue(key, value) {
         const param = this.getParameter(key);
         if (param) {

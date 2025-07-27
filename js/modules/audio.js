@@ -280,40 +280,46 @@ export class AudioSystem {
 
     applyReactivity(parameters) {
         if (!this.audioReactive || (!this.audioPlaying && !this.microphoneActive)) {
-            // Reset all modifiers to 1.0 when not reactive
+            // Reset all modifiers when not reactive
             parameters.resetAudioModifiers();
             return;
         }
         
         const audioLevels = this.analyzeAudio();
         
-        // Create dynamic multipliers based on audio
+        // Create dynamic multipliers based on audio - matching old implementation exactly
         const bassMultiplier = 1.0 + (audioLevels.bass * 0.8);      // 1.0 to 1.8x
         const midMultiplier = 1.0 + (audioLevels.mid * 0.4);        // 1.0 to 1.4x
         const trebleMultiplier = 1.0 + (audioLevels.treble * 0.3);  // 1.0 to 1.3x
         const overallMultiplier = 1.0 + (audioLevels.overall * 0.5); // 1.0 to 1.5x
         
         // Bass effects - make the center circle really pulse!
-        parameters.setAudioModifier('center_fill_radius', bassMultiplier * 1.5); // Extra bass sensitivity for center
-        parameters.setAudioModifier('truchet_radius', bassMultiplier);
-        parameters.setAudioModifier('zoom_level', 1.0 + (audioLevels.bass * 0.3)); // Slight zoom pulse
+        parameters.setAudioModifier('center_fill_radius', parameters.getBaseValue('center_fill_radius') * bassMultiplier * 1.5); // Extra bass sensitivity for center
+        parameters.setAudioModifier('truchet_radius', parameters.getBaseValue('truchet_radius') * bassMultiplier);
+        parameters.setAudioModifier('zoom_level', parameters.getBaseValue('zoom_level') * (1.0 + (audioLevels.bass * 0.3))); // Slight zoom pulse
         
         // Mid frequencies affect rotation and movement
-        parameters.setAudioModifier('rotation_speed', midMultiplier);
-        parameters.setAudioModifier('plane_rotation_speed', midMultiplier);
-        parameters.setAudioModifier('fly_speed', 1.0 + (audioLevels.mid * 0.6));
+        parameters.setAudioModifier('rotation_speed', parameters.getBaseValue('rotation_speed') * midMultiplier);
+        parameters.setAudioModifier('plane_rotation_speed', parameters.getBaseValue('plane_rotation_speed') * midMultiplier);
+        parameters.setAudioModifier('fly_speed', parameters.getBaseValue('fly_speed') * (1.0 + (audioLevels.mid * 0.6)));
         
         // Treble affects visual complexity and color
-        parameters.setAudioModifier('kaleidoscope_segments', trebleMultiplier);
-        parameters.setAudioModifier('color_intensity', trebleMultiplier);
-        parameters.setAudioModifier('color_speed', trebleMultiplier);
+        parameters.setAudioModifier('kaleidoscope_segments', parameters.getBaseValue('kaleidoscope_segments') * trebleMultiplier);
+        parameters.setAudioModifier('color_intensity', parameters.getBaseValue('color_intensity') * trebleMultiplier);
+        parameters.setAudioModifier('color_speed', parameters.getBaseValue('color_speed') * trebleMultiplier);
         
         // Overall volume affects contrast and layer count
-        parameters.setAudioModifier('contrast', overallMultiplier);
-        parameters.setAudioModifier('layer_count', 1.0 + (audioLevels.overall * 0.3));
+        parameters.setAudioModifier('contrast', parameters.getBaseValue('contrast') * overallMultiplier);
+        parameters.setAudioModifier('layer_count', parameters.getBaseValue('layer_count') * (1.0 + (audioLevels.overall * 0.3)));
         
         // Path effects for more dynamic movement
-        parameters.setAudioModifier('path_scale', 1.0 + (audioLevels.overall * 0.4));
+        parameters.setAudioModifier('path_scale', parameters.getBaseValue('path_scale') * (1.0 + (audioLevels.overall * 0.4)));
+        
+        // Camera parameters - pass through unchanged but set as modifiers to ensure consistency
+        parameters.setAudioModifier('camera_tilt_x', parameters.getBaseValue('camera_tilt_x'));
+        parameters.setAudioModifier('camera_tilt_y', parameters.getBaseValue('camera_tilt_y'));
+        parameters.setAudioModifier('camera_roll', parameters.getBaseValue('camera_roll'));
+        parameters.setAudioModifier('path_stability', parameters.getBaseValue('path_stability'));
     }
 
     isReactive() {

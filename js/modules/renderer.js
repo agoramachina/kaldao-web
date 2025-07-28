@@ -260,6 +260,8 @@ export class Renderer {
             // These control the mathematical color generation and post-processing
             uniform float u_use_color_palette;   // Enable mathematical color palette
             uniform float u_invert_colors;       // Apply color inversion post-processing
+            uniform float u_use_layer_colors;    // Enable layer-based coloring (debug feature)
+            uniform float u_color_mode;          // Color mode: 0=B&W, 1=Original/Palette, 2=Layer
             uniform vec3 u_palette_a;            // Color palette coefficient A
             uniform vec3 u_palette_b;            // Color palette coefficient B
             uniform vec3 u_palette_c;            // Color palette coefficient C
@@ -318,8 +320,8 @@ export class Renderer {
                 // Generate fractal pattern using simplified mathematics
                 vec3 col = simpleFractalEffect(p);
                 
-                // Apply color palette if enabled
-                if (u_use_color_palette > 0.5) {
+                // Apply color palette based on color mode
+                if (u_color_mode > 0.5 && u_color_mode < 1.5) { // Mode 1: Original Palette System
                     float t = length(col) + u_color_time;
                     col = palette(t) * length(col);
                 }
@@ -457,7 +459,7 @@ export class Renderer {
         
         // COLOR SYSTEM UNIFORMS - Mathematical color generation
         const colorUniforms = [
-            'u_use_color_palette', 'u_invert_colors',
+            'u_use_color_palette', 'u_invert_colors', 'u_use_layer_colors', 'u_color_mode',
             'u_palette_a', 'u_palette_b', 'u_palette_c', 'u_palette_d'
         ];
         
@@ -616,6 +618,14 @@ export class Renderer {
         // Color system state
         this.gl.uniform1f(this.uniforms.u_use_color_palette, renderState.useColorPalette ? 1.0 : 0.0);
         this.gl.uniform1f(this.uniforms.u_invert_colors, renderState.invertColors ? 1.0 : 0.0);
+        
+        // New color mode system
+        if (this.uniforms.u_use_layer_colors) {
+            this.gl.uniform1f(this.uniforms.u_use_layer_colors, parameters.getValue('use_layer_colors'));
+        }
+        if (this.uniforms.u_color_mode) {
+            this.gl.uniform1f(this.uniforms.u_color_mode, parameters.getValue('color_mode'));
+        }
         
         // Color palette coefficients for mathematical color generation
         const palette = parameters.getPalette(renderState.currentPaletteIndex);

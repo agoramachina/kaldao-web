@@ -97,6 +97,8 @@ uniform float u_truchet_diagonal_threshold; // Replaces hardcoded: sqrt(0.5) ≈
 // COLOR SYSTEM UNIFORMS
 uniform float u_use_color_palette;         // Enable mathematical color palette
 uniform float u_invert_colors;             // Apply color inversion post-processing
+uniform float u_use_layer_colors;          // Enable layer-based coloring (debug feature)
+uniform float u_color_mode;                // Color mode: 0=B&W, 1=Original/Palette, 2=Layer
 uniform vec3 u_palette_a;                  // Color palette coefficient A
 uniform vec3 u_palette_b;                  // Color palette coefficient B
 uniform vec3 u_palette_c;                  // Color palette coefficient C
@@ -371,21 +373,25 @@ vec4 plane(vec3 ro, vec3 rd, vec3 pp, vec3 off, float aa, float n) {
     float lw = u_line_width_base * z; // Was hardcoded 0.025
     d -= lw;
     
-    // DEBUG: Select layer color based on layer number
-    vec3 layerColor = vec3(1.0); // default white
-    float layerIndex = mod(n, 12.0);
-    if (layerIndex < 1.0) layerColor = vec3(0.557, 0.141, 0.667); // #8E24AA - Purple
-    else if (layerIndex < 2.0) layerColor = vec3(0.098, 0.463, 0.824); // #1976D2 - Blue
-    else if (layerIndex < 3.0) layerColor = vec3(0.000, 0.475, 0.420); // #00796B - Teal
-    else if (layerIndex < 4.0) layerColor = vec3(0.220, 0.557, 0.235); // #388E3C - Green
-    else if (layerIndex < 5.0) layerColor = vec3(0.961, 0.486, 0.000); // #F57C00 - Orange
-    else if (layerIndex < 6.0) layerColor = vec3(0.902, 0.290, 0.098); // #E64A19 - Red-Orange
-    else if (layerIndex < 7.0) layerColor = vec3(0.776, 0.157, 0.157); // #C62828 - Red
-    else if (layerIndex < 8.0) layerColor = vec3(0.678, 0.078, 0.341); // #AD1457 - Pink
-    else if (layerIndex < 9.0) layerColor = vec3(0.416, 0.106, 0.604); // #6A1B9A - Dark Purple
-    else if (layerIndex < 10.0) layerColor = vec3(0.271, 0.153, 0.627); // #4527A0 - Indigo
-    else if (layerIndex < 11.0) layerColor = vec3(0.827, 0.184, 0.184); // #D32F2F - Light Red
-    else layerColor = vec3(0.271, 0.353, 0.392); // #455A64 - Blue Grey
+    // Layer coloring based on color mode
+    vec3 layerColor = vec3(1.0); // default white for traditional black & white aesthetic
+    
+    if (u_color_mode > 1.5) { // Mode 2: Layer Colors
+        // DEBUG FEATURE: Select layer color based on layer number
+        float layerIndex = mod(n, 12.0);
+        if (layerIndex < 1.0) layerColor = vec3(0.557, 0.141, 0.667); // #8E24AA - Purple
+        else if (layerIndex < 2.0) layerColor = vec3(0.098, 0.463, 0.824); // #1976D2 - Blue
+        else if (layerIndex < 3.0) layerColor = vec3(0.000, 0.475, 0.420); // #00796B - Teal
+        else if (layerIndex < 4.0) layerColor = vec3(0.220, 0.557, 0.235); // #388E3C - Green
+        else if (layerIndex < 5.0) layerColor = vec3(0.961, 0.486, 0.000); // #F57C00 - Orange
+        else if (layerIndex < 6.0) layerColor = vec3(0.902, 0.290, 0.098); // #E64A19 - Red-Orange
+        else if (layerIndex < 7.0) layerColor = vec3(0.776, 0.157, 0.157); // #C62828 - Red
+        else if (layerIndex < 8.0) layerColor = vec3(0.678, 0.078, 0.341); // #AD1457 - Pink
+        else if (layerIndex < 9.0) layerColor = vec3(0.416, 0.106, 0.604); // #6A1B9A - Dark Purple
+        else if (layerIndex < 10.0) layerColor = vec3(0.271, 0.153, 0.627); // #4527A0 - Indigo
+        else if (layerIndex < 11.0) layerColor = vec3(0.827, 0.184, 0.184); // #D32F2F - Light Red
+        else layerColor = vec3(0.271, 0.353, 0.392); // #455A64 - Blue Grey
+    }
     
     // Convert distance to color with layer-specific fill color
     vec3 col = mix(layerColor, vec3(0.0), smoothstep(aa, -aa, d));
@@ -511,8 +517,8 @@ vec3 effect(vec2 p, vec2 q) {
 // ====================
 
 vec3 postProcess(vec3 col, vec2 q) {
-    // Apply color palette if enabled
-    if (u_use_color_palette > 0.5) {
+    // Apply color palette based on color mode
+    if (u_color_mode > 0.5 && u_color_mode < 1.5) { // Mode 1: Original Palette System
         float t = length(col) + u_color_time;
         col = palette(t) * length(col);
     }

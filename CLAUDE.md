@@ -133,7 +133,7 @@ Mathematical constants exposed from shader:
 | `R` | Reset current parameter |
 | `Shift` + `R` | Reset all parameters (with confirmation) |
 | `.` | Randomize parameters |
-| `C` | Randomize colors |
+| `C` | Advanced color menu (palette editor & layer colors) |
 | `Shift` + `C` | Reset to black & white |
 | `I` | Invert colors |
 | `A` | Upload audio file / toggle playback |
@@ -160,7 +160,7 @@ Mathematical constants exposed from shader:
 | Pinch | Zoom in/out |
 | Single tap | Toggle menu |
 | Long press (2s) | Reset all parameters |
-| Two-finger tap | Randomize colors |
+| Two-finger tap | Advanced color menu |
 | Shake device | Randomize parameters |
 | Device tilt | Camera control (X/Y axes) |
 

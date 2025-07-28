@@ -77,34 +77,11 @@ export class ColorManager {
         // Create modal overlay
         const overlay = document.createElement('div');
         overlay.id = 'advancedColorOverlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Courier New', monospace;
-        `;
+        // Styles are now handled in color-menu.css
 
         // Create main dialog
         const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            background: rgba(26, 26, 26, 0.3);
-            border: 2px solid #E91E63;
-            border-radius: 8px;
-            padding: 20px;
-            max-width: 90vw;
-            max-height: 90vh;
-            overflow-y: auto;
-            color: #ffffff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
-            width: 900px;
-        `;
+        // Styles are now handled in color-menu.css
 
         dialog.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

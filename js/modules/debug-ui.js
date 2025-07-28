@@ -11,6 +11,9 @@ export class DebugUIManager {
         this.keyboardNavigationActive = false; // Track if we're currently navigating with keyboard
         this.keyboardNavigationTimeout = null; // Timeout to reset keyboard navigation flag
         
+        // Debug logging menu state
+        this.debugLoggingMenuVisible = false;
+        
         // Debug logging settings - control what gets logged to console
         this.debugLogging = {
             audioLevels: false,      // 🎤 Audio level analysis
@@ -900,6 +903,7 @@ export class DebugUIManager {
         // Create modal overlay
         const overlay = document.createElement('div');
         overlay.id = 'debugLoggingOverlay';
+        this.debugLoggingMenuVisible = true;
         overlay.style.cssText = `
             position: fixed;
             top: 0;
@@ -1001,19 +1005,25 @@ export class DebugUIManager {
 
         if (closeButton) {
             closeButton.onclick = () => {
-                document.body.removeChild(overlay);
+                this.hideDebugLoggingControls(overlay);
             };
         }
 
-        // Handle Escape key
-        dialog.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (closeButton) closeButton.click();
-            }
-        });
+        // ESC key handling moved to main controls for coordination
 
         // Focus the dialog
         setTimeout(() => dialog.focus(), 100);
+    }
+    
+    // Hide debug logging controls
+    hideDebugLoggingControls(overlay = null) {
+        if (!overlay) {
+            overlay = document.getElementById('debugLoggingOverlay');
+        }
+        if (overlay && overlay.parentNode) {
+            document.body.removeChild(overlay);
+        }
+        this.debugLoggingMenuVisible = false;
     }
     
     // Helper method to check if a specific debug type should be logged

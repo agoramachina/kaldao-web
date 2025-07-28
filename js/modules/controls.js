@@ -164,7 +164,9 @@ export class ControlsManager {
             case 'Escape':
                 e.preventDefault();
                 // Check if any advanced menus are open first
-                if (this.app.audio.advancedMenuVisible) {
+                if (this.app.debugUI.debugLoggingMenuVisible) {
+                    this.app.debugUI.hideDebugLoggingControls();
+                } else if (this.app.audio.advancedMenuVisible) {
                     this.app.audio.hideAdvancedAudioMenu();
                 } else if (this.app.color.advancedColorMenuVisible) {
                     this.app.color.hideAdvancedColorMenu();
@@ -198,6 +200,11 @@ export class ControlsManager {
             case 'KeyO':
                 e.preventDefault();
                 // OSC functionality removed
+                break;
+                
+            case 'KeyD':  // DEBUG LOGGING CONTROLS (available in normal mode too)
+                e.preventDefault();
+                this.app.debugUI.showDebugLoggingControls();
                 break;
                 
             case 'Semicolon':  // THE DEBUG MODE TOGGLE
@@ -303,7 +310,9 @@ export class ControlsManager {
             case 'Escape':
                 e.preventDefault();
                 // Check if any advanced menus are open first
-                if (this.app.audio.advancedMenuVisible) {
+                if (this.app.debugUI.debugLoggingMenuVisible) {
+                    this.app.debugUI.hideDebugLoggingControls();
+                } else if (this.app.audio.advancedMenuVisible) {
                     this.app.audio.hideAdvancedAudioMenu();
                 } else if (this.app.color.advancedColorMenuVisible) {
                     this.app.color.hideAdvancedColorMenu();

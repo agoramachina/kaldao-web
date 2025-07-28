@@ -900,36 +900,28 @@ export class DebugUIManager {
     
     // Show debug logging control popup
     showDebugLoggingControls() {
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'debugLoggingOverlay';
-        this.debugLoggingMenuVisible = true;
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Courier New', monospace;
-        `;
-
-        // Create dialog box
+        // Create menu dialog (no full-screen overlay)
         const dialog = document.createElement('div');
+        dialog.id = 'debugLoggingOverlay';
+        this.debugLoggingMenuVisible = true;
         dialog.style.cssText = `
-            background: #1a1a1a;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 26, 0.95);
             border: 2px solid #2196F3;
-            border-radius: 8px;
+            border-radius: 12px;
             padding: 25px;
             max-width: 500px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
             color: #ffffff;
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         `;
 
@@ -978,8 +970,7 @@ export class DebugUIManager {
             </div>
         `;
 
-        overlay.appendChild(dialog);
-        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
 
         // Set up event handlers for checkboxes
         loggingOptions.forEach(option => {
@@ -1005,7 +996,7 @@ export class DebugUIManager {
 
         if (closeButton) {
             closeButton.onclick = () => {
-                this.hideDebugLoggingControls(overlay);
+                this.hideDebugLoggingControls(dialog);
             };
         }
 
@@ -1016,12 +1007,12 @@ export class DebugUIManager {
     }
     
     // Hide debug logging controls
-    hideDebugLoggingControls(overlay = null) {
-        if (!overlay) {
-            overlay = document.getElementById('debugLoggingOverlay');
+    hideDebugLoggingControls(dialog = null) {
+        if (!dialog) {
+            dialog = document.getElementById('debugLoggingOverlay');
         }
-        if (overlay && overlay.parentNode) {
-            document.body.removeChild(overlay);
+        if (dialog && dialog.parentNode) {
+            document.body.removeChild(dialog);
         }
         this.debugLoggingMenuVisible = false;
     }

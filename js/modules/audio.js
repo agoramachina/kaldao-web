@@ -616,13 +616,9 @@ export class AudioSystem {
             return;
         }
         
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'advancedAudioOverlay';
-        // Styles are now handled in audio-menu.css
-
-        // Create main dialog
+        // Create menu dialog (no full-screen overlay)
         const dialog = document.createElement('div');
+        dialog.id = 'advancedAudioOverlay';
         // Styles are now handled in audio-menu.css
 
         dialog.innerHTML = `
@@ -731,8 +727,7 @@ export class AudioSystem {
             </div>
         `;
 
-        overlay.appendChild(dialog);
-        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
         
         this.advancedMenuVisible = true;
         

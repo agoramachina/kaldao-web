@@ -74,13 +74,9 @@ export class ColorManager {
             return;
         }
         
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'advancedColorOverlay';
-        // Styles are now handled in color-menu.css
-
-        // Create main dialog
+        // Create menu dialog (no full-screen overlay)
         const dialog = document.createElement('div');
+        dialog.id = 'advancedColorOverlay';
         // Styles are now handled in color-menu.css
 
         dialog.innerHTML = `
@@ -180,8 +176,7 @@ export class ColorManager {
             </div>
         `;
 
-        overlay.appendChild(dialog);
-        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
         
         this.advancedColorMenuVisible = true;
         

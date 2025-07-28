@@ -730,6 +730,11 @@ export class AudioSystem {
                             <button id="saveMappings" style="padding: 6px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Save Mappings</button>
                             <button id="loadAudio" style="padding: 6px; background: #FF9800; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load Audio</button>
                         </div>
+                        
+                        <!-- Random Assignment Button -->
+                        <div style="margin-top: 10px; text-align: center;">
+                            <button id="randomAssignMappings" style="padding: 8px 12px; background: #9C27B0; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px; font-weight: bold;">🎲 Random Chaos</button>
+                        </div>
                     </div>
                     
                 </div>
@@ -1152,6 +1157,14 @@ export class AudioSystem {
                 this.uploadAudioFile();
             };
         }
+        
+        // Random assignment button
+        const randomBtn = document.getElementById('randomAssignMappings');
+        if (randomBtn) {
+            randomBtn.onclick = () => {
+                this.randomlyAssignArtisticParameters();
+            };
+        }
     }
     
     loadPresetMappings() {
@@ -1170,6 +1183,50 @@ export class AudioSystem {
         
         this.populateFrequencyMappings();
         this.app.ui.updateStatus('🎵 Loaded preset audio mappings', 'success');
+    }
+    
+    randomlyAssignArtisticParameters() {
+        // Clear existing mappings
+        this.parameterMappings = {};
+        
+        // Get all artistic parameters (excluding color and speed parameters for stability)
+        const artisticParams = this.app.parameters.getParameterKeys().filter(key => 
+            !['color_intensity', 'color_speed'].includes(key)
+        );
+        
+        // Define available frequency bands
+        const frequencyBands = [
+            'subBass', 'bass', 'lowMid', 'mid', 'highMid', 
+            'presence', 'brilliance', 'air', 'sparkle', 'overall'
+        ];
+        
+        // Randomly assign 6-8 artistic parameters to random frequency bands
+        const numAssignments = Math.floor(Math.random() * 3) + 6; // 6-8 assignments
+        
+        for (let i = 0; i < numAssignments; i++) {
+            // Pick a random artistic parameter
+            const paramKey = artisticParams[Math.floor(Math.random() * artisticParams.length)];
+            
+            // Pick a random frequency band
+            const audioSource = frequencyBands[Math.floor(Math.random() * frequencyBands.length)];
+            
+            // Create unique mapping key
+            const mappingKey = `${paramKey}_${audioSource}`;
+            
+            // Skip if this exact mapping already exists
+            if (this.parameterMappings[mappingKey]) continue;
+            
+            // Create mapping with random sensitivity between 0.5 and 2.5
+            this.parameterMappings[mappingKey] = {
+                paramKey: paramKey,
+                source: audioSource,
+                sensitivity: Math.random() * 2.0 + 0.5 // 0.5 to 2.5
+            };
+        }
+        
+        // Update the display
+        this.populateFrequencyMappings();
+        this.app.ui.updateStatus('🎲 Randomly assigned artistic parameters to audio frequencies', 'success');
     }
     
     saveMappingsToFile() {

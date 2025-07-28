@@ -8,6 +8,8 @@ export class DebugUIManager {
         this.currentDebugParameterIndex = 0;
         this.allDebugKeys = []; // Flattened list of all debug parameter keys for navigation
         this.parameterModificationCount = 0; // Track how many debug params have been modified
+        this.keyboardNavigationActive = false; // Track if we're currently navigating with keyboard
+        this.keyboardNavigationTimeout = null; // Timeout to reset keyboard navigation flag
     }
 
     init(app) {
@@ -72,9 +74,34 @@ export class DebugUIManager {
     switchDebugParameter(delta) {
         if (this.allDebugKeys.length === 0) return;
         
+        // Set keyboard navigation flag to prevent mouse interference
+        this.keyboardNavigationActive = true;
+        
+        // Add CSS class to disable hover effects during keyboard navigation
+        const debugParamsList = document.getElementById('debugParametersList');
+        if (debugParamsList) {
+            debugParamsList.classList.add('keyboard-navigation');
+        }
+        
+        // Clear any existing timeout
+        if (this.keyboardNavigationTimeout) {
+            clearTimeout(this.keyboardNavigationTimeout);
+        }
+        
+        // Reset flag after a short delay to allow mouse interaction again
+        this.keyboardNavigationTimeout = setTimeout(() => {
+            this.keyboardNavigationActive = false;
+            // Remove CSS class to re-enable hover effects
+            if (debugParamsList) {
+                debugParamsList.classList.remove('keyboard-navigation');
+            }
+        }, 500); // Slightly longer timeout to ensure hover effects don't interfere
+        
         // Wrap around at the ends of the list for continuous navigation
         this.currentDebugParameterIndex = (this.currentDebugParameterIndex + delta + this.allDebugKeys.length) % this.allDebugKeys.length;
-        this.updateDebugMenuDisplay();
+        
+        // Use lightweight selection update instead of full HTML rebuild
+        this.updateSelectionOnly();
         
         // Provide immediate feedback about which parameter is now selected
         const currentKey = this.allDebugKeys[this.currentDebugParameterIndex];
@@ -120,16 +147,28 @@ export class DebugUIManager {
             const paramKey = line.getAttribute('data-param-key');
             const paramType = line.getAttribute('data-param-type');
             
-            // Click to select parameter
+            // Click to select parameter (only if not in keyboard navigation mode)
             line.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.selectParameterByKey(paramKey, paramType);
+                if (!this.keyboardNavigationActive) {
+                    this.selectParameterByKey(paramKey, paramType);
+                }
             });
             
-            // Double-click to edit parameter value
+            // Double-click to edit parameter value (only if not in keyboard navigation mode)
             line.addEventListener('dblclick', (e) => {
                 e.preventDefault();
-                this.editParameterValue(paramKey, line);
+                if (!this.keyboardNavigationActive) {
+                    this.editParameterValue(paramKey, line);
+                }
+            });
+            
+            // Prevent mouse hover effects during keyboard navigation
+            line.addEventListener('mouseenter', (e) => {
+                if (this.keyboardNavigationActive) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
             });
         });
     }
@@ -137,14 +176,14 @@ export class DebugUIManager {
     // ENHANCEMENT: Select a parameter by its key (for mouse interaction)
     selectParameterByKey(paramKey, paramType) {
         if (paramType === 'artistic') {
-            // Switch to normal mode and select artistic parameter
-            if (this.app.debugMenuVisible) {
-                this.app.debugUI.toggleDebugMenu(); // Exit debug mode
-            }
-            const index = this.app.parameters.parameterKeys.indexOf(paramKey);
+            // Select artistic parameter in debug mode (don't close menu)
+            const index = this.allDebugKeys.indexOf(paramKey);
             if (index !== -1) {
-                this.app.currentParameterIndex = index;
-                this.app.ui.updateDisplay();
+                this.currentDebugParameterIndex = index;
+                this.updateDebugMenuDisplay();
+                
+                const param = this.app.parameters.getParameter(paramKey);
+                this.app.ui.updateStatus(`Selected: ${param.name}`, 'info');
             }
         } else {
             // Select debug parameter
@@ -334,6 +373,34 @@ export class DebugUIManager {
         
         // ENHANCEMENT: Add click event listeners for mouse interaction
         this.setupMouseInteraction();
+        
+        // Update the current parameter info panel
+        this.updateCurrentParameterInfo();
+    }
+
+    // Lightweight selection update that doesn't rebuild HTML (prevents hover animation re-triggering)
+    updateSelectionOnly() {
+        if (!this.app.debugMenuVisible || this.allDebugKeys.length === 0) return;
+
+        const currentKey = this.allDebugKeys[this.currentDebugParameterIndex];
+        
+        // Remove current selection from all items
+        const allParamLines = document.querySelectorAll('.debug-param-line');
+        allParamLines.forEach(line => {
+            line.classList.remove('debug-param-current');
+            line.style.fontWeight = 'normal';
+            line.style.color = '#ffffff';
+            line.style.background = 'transparent';
+        });
+        
+        // Apply current selection to the right item
+        const currentLine = document.querySelector(`[data-param-key="${currentKey}"]`);
+        if (currentLine) {
+            currentLine.classList.add('debug-param-current');
+            currentLine.style.fontWeight = 'bold';
+            currentLine.style.color = '#4CAF50';
+            currentLine.style.background = 'rgba(76, 175, 80, 0.1)';
+        }
         
         // Update the current parameter info panel
         this.updateCurrentParameterInfo();

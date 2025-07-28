@@ -426,6 +426,12 @@
     transform: translateX(1px);
 }
 
+/* Disable transitions during keyboard navigation to prevent animation re-triggering */
+/* This preserves the hover state but prevents the animation from playing */
+#debugParametersList.keyboard-navigation .debug-param-line {
+    transition: none !important;
+}
+
 /* ==========================================================================
    MATHEMATICAL CATEGORY COLOR CODING
    ========================================================================== */

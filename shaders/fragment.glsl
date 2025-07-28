@@ -15,7 +15,7 @@ precision highp float;
 // CORE SYSTEM UNIFORMS - Drive basic fractal animation and structure
 // ====================
 uniform vec2 u_resolution;                 // Screen resolution for aspect ratio correction
-uniform float u_time;                      // Current time (used for fallback timing if needed)
+// u_time removed - not used in shader, JavaScript handles time accumulation
 uniform float u_camera_position;           // Position along tunnel path (JavaScript-controlled)
 uniform float u_rotation_time;             // Accumulated rotation time (JavaScript-controlled)
 uniform float u_plane_rotation_time;       // Per-layer rotation time (JavaScript-controlled)
@@ -24,14 +24,13 @@ uniform float u_color_time;                // Color cycling time (JavaScript-con
 // ====================
 // ARTISTIC PARAMETER UNIFORMS - User-friendly creative controls
 // ====================
-uniform float u_fly_speed;                 // Speed of movement (used by JavaScript time accumulation)
+// Speed uniforms removed - JavaScript handles time accumulation, not shader
+// uniform float u_fly_speed, u_rotation_speed, u_plane_rotation_speed, u_color_speed
 uniform float u_contrast;                  // Edge sharpness and detail visibility
 uniform float u_kaleidoscope_segments;     // Number of radial mirror segments
 uniform float u_layer_count;               // How many depth layers to render
 uniform float u_truchet_radius;            // Size of circular pattern elements
 uniform float u_center_fill_radius;        // Central area fill control
-uniform float u_rotation_speed;            // Speed of pattern rotation (used by JavaScript)
-uniform float u_plane_rotation_speed;      // Per-layer rotation speed (used by JavaScript)
 uniform float u_zoom_level;                // Magnification level
 uniform float u_color_intensity;           // Overall brightness multiplier
 uniform float u_camera_tilt_x;             // Camera horizontal tilt
@@ -39,7 +38,6 @@ uniform float u_camera_tilt_y;             // Camera vertical tilt
 uniform float u_camera_roll;               // Camera rotation around view axis
 uniform float u_path_stability;            // Curvature vs straightness of tunnel path
 uniform float u_path_scale;                // Overall scale of path movements
-uniform float u_color_speed;               // Speed of color palette cycling (used by JavaScript)
 
 // ====================
 // DEBUG PARAMETER UNIFORMS - Mathematical exploration controls
@@ -95,9 +93,8 @@ uniform float u_detail_frequency;          // Replaces hardcoded: 100.0 detail f
 uniform float u_truchet_diagonal_threshold; // Replaces hardcoded: sqrt(0.5) ≈ 0.707
 
 // COLOR SYSTEM UNIFORMS
-uniform float u_use_color_palette;         // Enable mathematical color palette
+// u_use_color_palette and u_use_layer_colors removed - replaced by u_color_mode
 uniform float u_invert_colors;             // Apply color inversion post-processing
-uniform float u_use_layer_colors;          // Enable layer-based coloring (debug feature)
 uniform float u_color_mode;                // Color mode: 0=B&W, 1=Original/Palette, 2=Layer
 uniform vec3 u_palette_a;                  // Color palette coefficient A
 uniform vec3 u_palette_b;                  // Color palette coefficient B

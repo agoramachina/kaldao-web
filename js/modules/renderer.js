@@ -187,7 +187,7 @@ export class Renderer {
             // CORE SYSTEM UNIFORMS
             // These drive the basic fractal mathematics and are essential for any visualization
             uniform vec2 u_resolution;           // Screen resolution for aspect ratio correction
-            uniform float u_time;                // Current time for animations
+            // u_time removed - not used in shader
             uniform float u_camera_position;     // Position along the tunnel path
             uniform float u_rotation_time;       // Accumulated rotation for pattern spinning
             uniform float u_plane_rotation_time; // Per-layer rotation accumulation
@@ -195,14 +195,12 @@ export class Renderer {
             
             // ARTISTIC PARAMETER UNIFORMS
             // These correspond to the user-friendly creative controls
-            uniform float u_fly_speed;           // Speed of movement through tunnel
+            // Speed uniforms removed - JavaScript handles time accumulation
             uniform float u_contrast;            // Edge sharpness and detail visibility
             uniform float u_kaleidoscope_segments; // Number of radial mirror segments
             uniform float u_layer_count;         // How many depth layers to render
             uniform float u_truchet_radius;      // Size of circular pattern elements
             uniform float u_center_fill_radius;  // Central area fill control
-            uniform float u_rotation_speed;      // Speed of pattern rotation
-            uniform float u_plane_rotation_speed; // Per-layer rotation speed
             uniform float u_zoom_level;          // Magnification level
             uniform float u_color_intensity;     // Overall brightness multiplier
             uniform float u_camera_tilt_x;       // Camera horizontal tilt
@@ -210,7 +208,6 @@ export class Renderer {
             uniform float u_camera_roll;         // Camera rotation around view axis
             uniform float u_path_stability;      // Curvature vs straightness of tunnel path
             uniform float u_path_scale;          // Overall scale of path movements
-            uniform float u_color_speed;         // Speed of color palette cycling
             
             // DEBUG PARAMETER UNIFORMS - MATHEMATICAL CONTROL LAYER
             // These expose the internal mathematical constants for deep exploration
@@ -258,9 +255,8 @@ export class Renderer {
             
             // COLOR SYSTEM UNIFORMS
             // These control the mathematical color generation and post-processing
-            uniform float u_use_color_palette;   // Enable mathematical color palette
+            // u_use_color_palette and u_use_layer_colors removed - replaced by u_color_mode  
             uniform float u_invert_colors;       // Apply color inversion post-processing
-            uniform float u_use_layer_colors;    // Enable layer-based coloring (debug feature)
             uniform float u_color_mode;          // Color mode: 0=B&W, 1=Original/Palette, 2=Layer
             uniform vec3 u_palette_a;            // Color palette coefficient A
             uniform vec3 u_palette_b;            // Color palette coefficient B
@@ -303,7 +299,7 @@ export class Renderer {
                 
                 // Create truchet-inspired pattern with debug parameter control
                 fractalP *= u_zoom_level;
-                fractalP += u_rotation_time * u_rotation_speed;
+                fractalP += u_rotation_time; // u_rotation_speed removed from shader
                 
                 float pattern = sin(fractalP.x * u_detail_frequency) * cos(fractalP.y * u_detail_frequency);
                 pattern = smoothstep(-u_aa_multiplier * 0.01, u_aa_multiplier * 0.01, pattern - u_truchet_radius);
@@ -411,7 +407,7 @@ export class Renderer {
         // CORE SYSTEM UNIFORMS - Essential for basic operation
         const coreUniforms = [
             'u_resolution',                    // Screen dimensions for aspect ratio
-            'u_time',                         // Current time for animations
+            // 'u_time' removed - not used in shader
             'u_camera_position',              // Position along tunnel path
             'u_rotation_time',                // Accumulated rotation time
             'u_plane_rotation_time',          // Per-layer rotation time
@@ -420,11 +416,11 @@ export class Renderer {
         
         // ARTISTIC PARAMETER UNIFORMS - User-friendly creative controls
         const artisticUniforms = [
-            'u_fly_speed', 'u_contrast', 'u_kaleidoscope_segments', 'u_layer_count',
-            'u_truchet_radius', 'u_center_fill_radius', 'u_rotation_speed',
-            'u_plane_rotation_speed', 'u_zoom_level', 'u_color_intensity',
+            // Speed uniforms removed - JavaScript handles time accumulation
+            'u_contrast', 'u_kaleidoscope_segments', 'u_layer_count',
+            'u_truchet_radius', 'u_center_fill_radius', 'u_zoom_level', 'u_color_intensity',
             'u_camera_tilt_x', 'u_camera_tilt_y', 'u_camera_roll',
-            'u_path_stability', 'u_path_scale', 'u_color_speed'
+            'u_path_stability', 'u_path_scale'
         ];
         
         // DEBUG PARAMETER UNIFORMS - Mathematical exploration controls
@@ -459,7 +455,8 @@ export class Renderer {
         
         // COLOR SYSTEM UNIFORMS - Mathematical color generation
         const colorUniforms = [
-            'u_use_color_palette', 'u_invert_colors', 'u_use_layer_colors', 'u_color_mode',
+            // 'u_use_color_palette', 'u_use_layer_colors' removed - replaced by u_color_mode
+            'u_invert_colors', 'u_color_mode',
             'u_palette_a', 'u_palette_b', 'u_palette_c', 'u_palette_d'
         ];
         
@@ -573,7 +570,7 @@ export class Renderer {
     setCoreUniforms(parameters) {
         // These uniforms drive the fundamental mathematical evolution of the fractal
         this.gl.uniform2f(this.uniforms.u_resolution, this.canvas.width, this.canvas.height);
-        this.gl.uniform1f(this.uniforms.u_time, performance.now() * 0.001);
+        // u_time removed from shader - JavaScript handles time accumulation
         this.gl.uniform1f(this.uniforms.u_camera_position, parameters.timeAccumulation.camera_position);
         this.gl.uniform1f(this.uniforms.u_rotation_time, parameters.timeAccumulation.rotation_time);
         this.gl.uniform1f(this.uniforms.u_plane_rotation_time, parameters.timeAccumulation.plane_rotation_time);
@@ -615,14 +612,13 @@ export class Renderer {
     
     // RENDER STATE UNIFORM SETTING - Visual presentation controls
     setRenderStateUniforms(renderState, parameters) {
-        // Color system state
-        this.gl.uniform1f(this.uniforms.u_use_color_palette, renderState.useColorPalette ? 1.0 : 0.0);
-        this.gl.uniform1f(this.uniforms.u_invert_colors, renderState.invertColors ? 1.0 : 0.0);
-        
-        // New color mode system
-        if (this.uniforms.u_use_layer_colors) {
-            this.gl.uniform1f(this.uniforms.u_use_layer_colors, parameters.getValue('use_layer_colors'));
+        // Color system state  
+        // u_use_color_palette removed - replaced by color_mode
+        if (this.uniforms.u_invert_colors) {
+            this.gl.uniform1f(this.uniforms.u_invert_colors, renderState.invertColors ? 1.0 : 0.0);
         }
+        
+        // New unified color mode system
         if (this.uniforms.u_color_mode) {
             this.gl.uniform1f(this.uniforms.u_color_mode, parameters.getValue('color_mode'));
         }

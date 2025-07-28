@@ -310,6 +310,10 @@ export class ColorManager {
         
         if (paletteSelector) {
             paletteSelector.onchange = () => {
+                if (paletteSelector.value === 'new') {
+                    this.createNewPalette();
+                    return;
+                }
                 this.app.currentPaletteIndex = parseInt(paletteSelector.value);
                 this.updateColorPreview();
                 this.populateColorComponentEditor();
@@ -339,6 +343,22 @@ export class ColorManager {
                 this.updateColorPreview();
                 this.populateColorComponentEditor();
                 this.app.ui.updateDisplay();
+            };
+        }
+        
+        // Load Color Preset button
+        const loadPresetBtn = document.getElementById('loadColorPreset');
+        if (loadPresetBtn) {
+            loadPresetBtn.onclick = () => {
+                this.loadColorPreset();
+            };
+        }
+        
+        // Save Color Preset button
+        const savePresetBtn = document.getElementById('saveColorPreset');
+        if (savePresetBtn) {
+            savePresetBtn.onclick = () => {
+                this.saveColorPreset();
             };
         }
     }
@@ -405,9 +425,14 @@ export class ColorManager {
         
         if (paletteSelector) {
             // Populate palette options
-            paletteSelector.innerHTML = this.colorPalettes.map((palette, index) => 
+            let options = this.colorPalettes.map((palette, index) => 
                 `<option value="${index}">${palette.name}</option>`
             ).join('');
+            
+            // Add "New palette..." option at the end
+            options += `<option value="new">New palette...</option>`;
+            
+            paletteSelector.innerHTML = options;
             paletteSelector.value = this.app.currentPaletteIndex;
         }
     }
@@ -417,13 +442,15 @@ export class ColorManager {
         if (!container) return;
         
         const palette = this.colorPalettes[this.app.currentPaletteIndex];
+        const colorMode = this.app.parameters.getValue('color_mode');
         
-        if (!palette || this.app.currentPaletteIndex === 0) {
+        // Show B&W editing only when Original Palette System is selected (mode 1)
+        if (!palette || (this.app.currentPaletteIndex === 0 && colorMode < 0.5)) {
             container.innerHTML = `
                 <div style="text-align: center; color: #666; font-style: italic; padding: 40px;">
                     <div style="font-size: 48px; margin-bottom: 20px;">⚫⚪</div>
                     <div>Black & White mode selected</div>
-                    <div style="font-size: 11px; margin-top: 10px;">Switch to a color palette to edit components</div>
+                    <div style="font-size: 11px; margin-top: 10px;">Switch to Original Palette System mode to edit B&W values</div>
                 </div>
             `;
             return;
@@ -553,5 +580,114 @@ export class ColorManager {
                 this.colorPalettes[index] = { ...palette };
             }
         });
+    }
+    
+    // Create a new color palette
+    createNewPalette() {
+        const paletteName = prompt('Enter name for new palette:', `Custom ${this.colorPalettes.length}`);
+        if (!paletteName) {
+            // User cancelled, reset selector to current palette
+            const paletteSelector = document.getElementById('paletteSelector');
+            if (paletteSelector) {
+                paletteSelector.value = this.app.currentPaletteIndex;
+            }
+            return;
+        }
+        
+        // Create new palette with default rainbow values
+        const newPalette = {
+            name: paletteName,
+            a: [0.5, 0.5, 0.5],
+            b: [0.5, 0.5, 0.5], 
+            c: [1.0, 1.0, 1.0],
+            d: [0.0, 0.33, 0.67]
+        };
+        
+        // Add to palette array
+        this.colorPalettes.push(newPalette);
+        
+        // Switch to the new palette
+        this.app.currentPaletteIndex = this.colorPalettes.length - 1;
+        
+        // Update displays
+        this.updateColorPreview();
+        this.updateColorModeControls();
+        this.populateColorComponentEditor();
+        this.app.ui.updateDisplay();
+        
+        // Show success message
+        this.app.ui.updateStatus(`Created new palette: ${paletteName}`, 'success');
+    }
+    
+    // Load color preset from file
+    loadColorPreset() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const presetData = JSON.parse(event.target.result);
+                    
+                    // Validate the preset data structure
+                    if (!presetData.colorPalettes || !Array.isArray(presetData.colorPalettes)) {
+                        throw new Error('Invalid preset format: missing colorPalettes array');
+                    }
+                    
+                    // Load the palettes
+                    this.colorPalettes = presetData.colorPalettes;
+                    
+                    // Reset to first palette
+                    this.app.currentPaletteIndex = 0;
+                    
+                    // Update displays
+                    this.updateColorPreview();
+                    this.updateColorModeControls();
+                    this.populateColorComponentEditor();
+                    this.app.ui.updateDisplay();
+                    
+                    this.app.ui.updateStatus(`Loaded color preset: ${file.name}`, 'success');
+                    
+                } catch (error) {
+                    this.app.ui.updateStatus(`Failed to load preset: ${error.message}`, 'error');
+                    console.error('Preset loading error:', error);
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+    
+    // Save color preset to file
+    saveColorPreset() {
+        const presetData = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            colorPalettes: this.colorPalettes
+        };
+        
+        const dataStr = JSON.stringify(presetData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().split('T')[0];
+        link.download = `kaldao-color-preset-${timestamp}.json`;
+        
+        link.click();
+        
+        // Clean up the URL object
+        setTimeout(() => URL.revokeObjectURL(link.href), 100);
+        
+        this.app.ui.updateStatus('Color preset saved', 'success');
     }
 }

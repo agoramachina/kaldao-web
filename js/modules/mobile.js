@@ -299,10 +299,10 @@ export class MobileControls {
         if (e.changedTouches.length === 2 && !this.isPinching && this.twoFingerTapStartTime > 0) {
             const tapDuration = Date.now() - this.twoFingerTapStartTime;
             
-            // If it was a quick tap (less than 300ms), randomize colors
+            // If it was a quick tap (less than 300ms), show advanced color menu
             if (tapDuration < 300) {
-                this.app.randomizeColors();
-                this.app.ui.updateStatus('🎨 Two-finger tap - Colors randomized!', 'success');
+                this.app.parameters.showAdvancedColorMenu();
+                this.app.ui.updateStatus('🎨 Two-finger tap - Advanced color menu opened!', 'success');
             }
         }
         

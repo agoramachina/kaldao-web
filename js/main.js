@@ -17,6 +17,7 @@ import { Renderer } from './modules/renderer.js';
 import { UIManager } from './modules/ui.js';
 import { FileManager } from './modules/fileIO.js';
 import { DebugUIManager } from './modules/debug-ui.js'; // NEW: Mathematical exploration interface
+import { ColorManager } from './modules/color.js'; // NEW: Dedicated color system management
 
 class KaldaoApp {
     constructor() {
@@ -31,6 +32,7 @@ class KaldaoApp {
         this.ui = new UIManager();                    // Artistic interface management
         this.fileManager = new FileManager();         // State persistence and sharing
         this.debugUI = new DebugUIManager();          // Mathematical exploration interface
+        this.color = new ColorManager();              // Color system management
         
         // APPLICATION STATE MANAGEMENT
         // These variables track the current operational context and user preferences
@@ -86,12 +88,14 @@ class KaldaoApp {
             // PHASE 2: Input and interface systems
             // These systems need to initialize after the renderer so they can
             // provide feedback about rendering capabilities and constraints
+            this.parameters.init(this);               // Parameter system needs app reference
             this.controls.init(this);                 // Context-sensitive input handling
             this.ui.init(this);                       // Artistic interface management
             this.audio.init(this);                    // Audio analysis system
             this.osc.init(this);                      // OSC hardware control system
             this.fileManager.init(this);              // State persistence system
             this.debugUI.init(this);                  // Mathematical exploration interface
+            this.color.init(this);                    // Color system management
             console.log('✅ All interface and control systems initialized');
             
             // PHASE 3: System integration and event handling

@@ -127,7 +127,8 @@ export class ControlsManager {
                 if (e.shiftKey) {
                     this.resetToBlackWhite();
                 } else {
-                    this.randomizeColors();
+                    // Show advanced color menu instead of randomizing colors
+                    this.app.parameters.showAdvancedColorMenu();
                 }
                 break;
                 

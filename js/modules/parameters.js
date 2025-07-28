@@ -191,6 +191,16 @@ export class ParameterManager {
                 value: 0.707,       // Default: abs(t2) > sqrt(0.5) ≈ 0.707 threshold
                 min: 0.1, max: 1.0, step: 0.01, 
                 name: "Truchet Diagonal Threshold" 
+            },
+            use_layer_colors: { 
+                value: 0.0,         // Default: disabled (0.0) - traditional black & white
+                min: 0.0, max: 1.0, step: 1.0, 
+                name: "Use Layer Colors" 
+            },
+            color_mode: {
+                value: 0.0,         // 0.0 = B&W, 1.0 = Original/Palette, 2.0 = Layer Colors
+                min: 0.0, max: 2.0, step: 1.0,
+                name: "Color Mode"
             }
         };
 
@@ -207,21 +217,9 @@ export class ParameterManager {
         // These store temporary audio-reactive adjustments that are applied on top of base parameter values
         this.audioModifiers = {};
         
-        // OSC modifiers system - non-destructive parameter modification via OSC
+        // OSC modifiers system - non-destructive parameter modification via OSC  
         // These store hardware control adjustments that are applied on top of base parameter values
         this.oscModifiers = {};
-
-        // Color palette system (unchanged)
-        // These define the mathematical coefficients for procedural color generation
-        this.colorPalettes = [
-            { name: "B&W", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.0, 0.0] },
-            { name: "Rainbow", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.33, 0.67] },
-            { name: "Fire", a: [0.5, 0.2, 0.1], b: [0.5, 0.3, 0.2], c: [2.0, 1.0, 0.5], d: [0.0, 0.25, 0.5] },
-            { name: "Ocean", a: [0.2, 0.5, 0.8], b: [0.2, 0.3, 0.5], c: [1.0, 1.5, 2.0], d: [0.0, 0.2, 0.5] },
-            { name: "Purple", a: [0.8, 0.5, 0.4], b: [0.2, 0.4, 0.2], c: [2.0, 1.0, 1.0], d: [0.0, 0.25, 0.25] },
-            { name: "Neon", a: [0.2, 0.2, 0.2], b: [0.8, 0.8, 0.8], c: [1.0, 2.0, 1.5], d: [0.0, 0.5, 0.8] },
-            { name: "Sunset", a: [0.7, 0.3, 0.2], b: [0.3, 0.2, 0.1], c: [1.5, 1.0, 0.8], d: [0.0, 0.1, 0.3] }
-        ];
 
         // Parameter navigation arrays (existing system unchanged)
         this.parameterKeys = [
@@ -260,9 +258,14 @@ export class ParameterManager {
                 'fov_base', 'fov_distortion', 'perspective_curve'
             ],
             'RENDERING': [
-                'aa_multiplier', 'line_width_base', 'detail_frequency', 'truchet_diagonal_threshold'
+                'aa_multiplier', 'line_width_base', 'detail_frequency', 'truchet_diagonal_threshold', 'use_layer_colors', 'color_mode'
             ]
         };
+    }
+
+    // Initialize the parameter system with app reference
+    init(app) {
+        this.app = app;
     }
 
     // Enhanced parameter access methods
@@ -340,13 +343,13 @@ export class ParameterManager {
         return { ...this.parameters, ...this.debugParameters };
     }
 
-    // Color palette system methods (unchanged)
+    // Color palette system methods - delegate to color module
     getColorPalettes() {
-        return this.colorPalettes;
+        return this.app ? this.app.color.getColorPalettes() : [];
     }
 
     getPalette(index) {
-        return this.colorPalettes[index];
+        return this.app ? this.app.color.getPalette(index) : null;
     }
 
     // Time accumulation system (unchanged)
@@ -379,7 +382,7 @@ export class ParameterManager {
             hash_seed_rotation: 1777.0, hash_seed_offset: 2087.0, hash_seed_speed: 3499.0,
             fov_base: 2.0, fov_distortion: 1.0, perspective_curve: 0.33,
             aa_multiplier: 3.0, line_width_base: 0.025, detail_frequency: 100.0,
-            truchet_diagonal_threshold: 0.707
+            truchet_diagonal_threshold: 0.707, use_layer_colors: 0.0, color_mode: 0.0
         };
         
         if (defaults[key] !== undefined) {
@@ -417,17 +420,15 @@ export class ParameterManager {
         });
     }
 
-    // Color palette state management (unchanged)
+    // Color palette state management - delegate to color module
     getPalettesState() {
-        return JSON.parse(JSON.stringify(this.colorPalettes));
+        return this.app ? this.app.color.getPalettesState() : [];
     }
 
     setPalettesState(palettes) {
-        palettes.forEach((palette, index) => {
-            if (this.colorPalettes[index]) {
-                this.colorPalettes[index] = { ...palette };
-            }
-        });
+        if (this.app) {
+            this.app.color.setPalettesState(palettes);
+        }
     }
 
     // Enhanced randomization that only affects user-facing parameters by default
@@ -481,17 +482,31 @@ export class ParameterManager {
         });
     }
 
-    // Color palette randomization (unchanged)
+    // Color palette randomization - delegate to color module
     randomizePalette(index) {
-        const palette = this.colorPalettes[index];
-        if (palette) {
-            for (let i = 0; i < 3; i++) {
-                palette.a[i] = Math.random();
-                palette.b[i] = Math.random();
-                palette.c[i] = Math.random() * 2.0;
-                palette.d[i] = Math.random();
-            }
+        if (this.app) {
+            this.app.color.randomizePalette(index);
         }
+    }
+
+    // Advanced color menu - delegate to color module
+    showAdvancedColorMenu() {
+        if (this.app) {
+            this.app.color.showAdvancedColorMenu();
+        }
+    }
+
+    // Delegate color palette methods to color module
+    randomizePalette(index) {
+        return this.app ? this.app.color.randomizePalette(index) : null;
+    }
+    
+    resetPalette(index) {
+        return this.app ? this.app.color.resetPalette(index) : null;
+    }
+    
+    resetAllPalettes() {
+        return this.app ? this.app.color.resetAllPalettes() : null;
     }
 
     // Audio modifiers system - for audio-reactive parameter control

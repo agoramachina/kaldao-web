@@ -166,6 +166,13 @@ export class DebugUIManager {
     setupMouseInteraction() {
         const parameterLines = document.querySelectorAll('.debug-param-line[data-param-key]');
         const parameterValues = document.querySelectorAll('.param-value[data-param-key]');
+        const parameterSliders = document.querySelectorAll('.param-slider[data-param-key]');
+        
+        console.log('Debug: setupMouseInteraction found:', {
+            lines: parameterLines.length,
+            values: parameterValues.length,
+            sliders: parameterSliders.length
+        });
         
         parameterLines.forEach(line => {
             const paramKey = line.getAttribute('data-param-key');
@@ -222,6 +229,53 @@ export class DebugUIManager {
                 valueSpan.style.backgroundColor = 'transparent';
             });
         });
+        
+        // Add minimal event handlers to test basic slider functionality
+        console.log('Debug: Attempting to add event handlers to', parameterSliders.length, 'sliders');
+        
+        parameterSliders.forEach((slider, index) => {
+            const paramKey = slider.getAttribute('data-param-key');
+            console.log(`Debug: Setting up slider ${index} for parameter "${paramKey}"`);
+            
+            // Test if slider element is accessible
+            console.log('Debug: Slider element:', slider, 'disabled?', slider.disabled, 'readonly?', slider.readOnly);
+            
+            // Update parameter when slider moves
+            slider.addEventListener('input', function(e) {
+                console.log('SUCCESS: Slider input event fired!', paramKey, e.target.value);
+                const newValue = parseFloat(e.target.value);
+                this.app.parameters.setValue(paramKey, newValue);
+            }.bind(this));
+            
+            slider.addEventListener('click', function(e) {
+                console.log('SUCCESS: Slider click event fired!', paramKey);
+            });
+            
+            slider.addEventListener('mousedown', function(e) {
+                console.log('SUCCESS: Slider mousedown event fired!', paramKey);
+            });
+        });
+    }
+    
+    // Helper method to format parameter values with minimum 2 decimal places
+    formatParameterValue(value, step) {
+        // Determine appropriate decimal places based on step size, minimum 2
+        let decimalPlaces;
+        if (step >= 1.0) {
+            decimalPlaces = 2; // Minimum 2 even for whole numbers (e.g., 5.00)
+        } else if (step >= 0.1) {
+            decimalPlaces = 2; // 2 decimal places (e.g., 1.50)
+        } else if (step >= 0.01) {
+            decimalPlaces = 2; // 2 decimal places (e.g., 0.50)
+        } else if (step >= 0.001) {
+            decimalPlaces = 3; // 3 decimal places for smaller steps (e.g., 0.125)
+        } else if (step >= 0.0001) {
+            decimalPlaces = 4; // 4 decimal places for very small steps
+        } else {
+            decimalPlaces = 5; // 5 decimal places for tiny steps
+        }
+        
+        return value.toFixed(decimalPlaces);
     }
     
     // ENHANCEMENT: Select a parameter by its key (for mouse interaction)
@@ -301,20 +355,8 @@ export class DebugUIManager {
                 // Update parameter value
                 this.app.parameters.setValue(paramKey, newValue);
                 
-                // Restore the value span with new value
-                let displayValue;
-                if (param.step >= 1.0) {
-                    displayValue = newValue.toFixed(0);
-                } else if (param.step >= 0.1) {
-                    displayValue = newValue.toFixed(1);
-                } else if (param.step >= 0.01) {
-                    displayValue = newValue.toFixed(2);
-                } else if (param.step >= 0.001) {
-                    displayValue = newValue.toFixed(3);
-                } else {
-                    displayValue = newValue.toFixed(4);
-                }
-                
+                // Restore the value span with new value using consistent formatting
+                let displayValue = this.formatParameterValue(newValue, param.step);
                 valueSpan.textContent = displayValue.padStart(8);
                 
                 // Update displays - use lightweight update to avoid losing focus
@@ -388,26 +430,18 @@ export class DebugUIManager {
             const index = this.app.parameters.parameterKeys.indexOf(key);
             const isCurrent = key === this.getCurrentSelectedParameterKey();
             
-            let displayValue;
-            if (param.step >= 1.0) {
-                displayValue = param.value.toFixed(0);
-            } else if (param.step >= 0.1) {
-                displayValue = param.value.toFixed(1);
-            } else if (param.step >= 0.01) {
-                displayValue = param.value.toFixed(2);
-            } else if (param.step >= 0.001) {
-                displayValue = param.value.toFixed(3);
-            } else {
-                displayValue = param.value.toFixed(4);
-            }
+            let displayValue = this.formatParameterValue(param.value, param.step);
             
             const textColor = isCurrent ? '#4CAF50' : '#ffffff';
             const fontWeight = isCurrent ? 'bold' : 'normal';
             const backgroundColor = isCurrent ? 'rgba(76, 175, 80, 0.1)' : 'transparent';
             
-            debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="artistic" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;">`;
-            debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
-            debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px;">${displayValue.padStart(8)}</span>`;
+            const sliderValue = ((param.value - param.min) / (param.max - param.min)) * 100;
+            
+            debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="artistic" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px; display: flex; align-items: center;">`;
+            debugHTML += `<span class="param-name" style="flex: 0 0 180px; white-space: nowrap; overflow: hidden;">${param.name.padEnd(26)}: </span>`;
+            debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px; flex: 0 0 70px; text-align: right; white-space: nowrap;">${displayValue.padStart(8)}</span>`;
+            debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}" style="flex: 0 0 120px; margin-left: 10px;">`;
             debugHTML += `</div>`;
         });
 
@@ -424,19 +458,8 @@ export class DebugUIManager {
                 const index = this.allDebugKeys.indexOf(key);
                 const isCurrent = key === this.getCurrentSelectedParameterKey();
                 
-                // Determine appropriate precision for display based on parameter step size
-                let displayValue;
-                if (param.step >= 1.0) {
-                    displayValue = param.value.toFixed(0);
-                } else if (param.step >= 0.1) {
-                    displayValue = param.value.toFixed(1);
-                } else if (param.step >= 0.01) {
-                    displayValue = param.value.toFixed(2);
-                } else if (param.step >= 0.001) {
-                    displayValue = param.value.toFixed(3);
-                } else {
-                    displayValue = param.value.toFixed(4);
-                }
+                // Format with appropriate decimal places based on step size
+                let displayValue = this.formatParameterValue(param.value, param.step);
                 
                 // Style the current parameter differently for clear visual feedback
                 const textColor = isCurrent ? '#4CAF50' : '#ffffff';
@@ -444,9 +467,12 @@ export class DebugUIManager {
                 const backgroundColor = isCurrent ? 'rgba(76, 175, 80, 0.1)' : 'transparent';
                 
                 // ENHANCEMENT: Add click handlers for mouse interaction
-                debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="debug" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;">`;
-                debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
-                debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px;">${displayValue.padStart(8)}</span>`;
+                const sliderValue = ((param.value - param.min) / (param.max - param.min)) * 100;
+                
+                debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="debug" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px; display: flex; align-items: center;">`;
+                debugHTML += `<span class="param-name" style="flex: 0 0 180px; white-space: nowrap; overflow: hidden;">${param.name.padEnd(26)}: </span>`;
+                debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px; flex: 0 0 70px; text-align: right; white-space: nowrap;">${displayValue.padStart(8)}</span>`;
+                debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}" style="flex: 0 0 120px; margin-left: 10px;">`;
                 debugHTML += `</div>`;
             });
         });
@@ -472,46 +498,34 @@ export class DebugUIManager {
             const paramKey = line.getAttribute('data-param-key');
             const paramType = line.getAttribute('data-param-type');
             
-            // Update the parameter value display
+            // Update the parameter value display and slider position
             const param = this.app.parameters.getParameter(paramKey);
             if (param) {
                 const valueSpan = line.querySelector('.param-value');
+                const slider = line.querySelector('.param-slider');
+                
                 if (valueSpan) {
-                    // Determine appropriate precision for display based on parameter step size
-                    let displayValue;
-                    if (param.step >= 1.0) {
-                        displayValue = param.value.toFixed(0);
-                    } else if (param.step >= 0.1) {
-                        displayValue = param.value.toFixed(1);
-                    } else if (param.step >= 0.01) {
-                        displayValue = param.value.toFixed(2);
-                    } else if (param.step >= 0.001) {
-                        displayValue = param.value.toFixed(3);
-                    } else {
-                        displayValue = param.value.toFixed(4);
-                    }
+                    // Format with appropriate decimal places based on step size
+                    let displayValue = this.formatParameterValue(param.value, param.step);
                     valueSpan.textContent = displayValue.padStart(8);
+                }
+                
+                // Update slider position to match current parameter value
+                if (slider) {
+                    slider.value = param.value;
                 }
             }
             
-            line.classList.remove('debug-param-current');
-            
-            // Restore appropriate non-selected styling based on parameter type
-            if (paramType === 'artistic') {
-                // Artistic parameters get white text when not selected
-                line.style.cssText = 'color: #ffffff; font-weight: normal; background: transparent; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
-            } else {
-                // Debug parameters get white text when not selected  
-                line.style.cssText = 'color: #ffffff; font-weight: normal; background: transparent; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
-            }
+            // Restore appropriate non-selected styling using CSS classes (preserves layout)
+            line.classList.remove('debug-param-current', 'selected');
+            line.classList.add('unselected');
         });
         
         // Apply current selection to the right item
         const currentLine = document.querySelector(`[data-param-key="${currentKey}"]`);
         if (currentLine) {
-            currentLine.classList.add('debug-param-current');
-            // Apply selected styling with complete CSS text to override any existing inline styles
-            currentLine.style.cssText = 'color: #4CAF50; font-weight: bold; background: rgba(76, 175, 80, 0.1); margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
+            currentLine.classList.remove('unselected');
+            currentLine.classList.add('debug-param-current', 'selected');
         }
         
         // Update the current parameter info panel

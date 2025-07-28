@@ -158,6 +158,10 @@
     padding: 2px 6px;
     border-radius: 3px;
     
+    /* Flexbox layout for consistent alignment */
+    display: flex !important;
+    align-items: center !important;
+    
     /* Preserve formatting for perfect parameter value alignment */
     white-space: pre !important;
     
@@ -166,6 +170,39 @@
     
     /* Subtle interactive feedback */
     cursor: default;
+}
+
+/* Ensure parameter name spans maintain consistent width */
+.debug-param-line .param-name {
+    flex: 0 0 180px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+}
+
+/* Ensure parameter value spans maintain consistent width */
+.debug-param-line .param-value {
+    flex: 0 0 70px !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure parameter sliders maintain consistent width */
+.debug-param-line .param-slider {
+    flex: 0 0 120px !important;
+    margin-left: 10px !important;
+}
+
+/* Selection states - these override inline styles safely */
+.debug-param-line.selected {
+    color: #4CAF50 !important;
+    font-weight: bold !important;
+    background: rgba(76, 175, 80, 0.1) !important;
+}
+
+.debug-param-line.unselected {
+    color: #ffffff !important;
+    font-weight: normal !important;
+    background: transparent !important;
 }
 
 /*
@@ -450,6 +487,120 @@
 
 .param-value:has(input):hover {
     background-color: transparent !important;
+}
+
+/* ==========================================================================
+   PARAMETER SLIDERS
+   ========================================================================== */
+
+/*
+ * Parameter sliders provide visual feedback about parameter ranges and allow
+ * intuitive mouse-based adjustment alongside keyboard controls
+ */
+.param-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    outline: none;
+    margin: 0 5px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.param-slider:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Slider thumb styling */
+.param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(76, 175, 80, 0.8);
+}
+
+.param-slider::-webkit-slider-thumb:hover {
+    background: #66BB6A;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.param-slider::-webkit-slider-thumb:active {
+    transform: scale(1.2);
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+}
+
+/* Firefox slider thumb */
+.param-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    border: 1px solid rgba(76, 175, 80, 0.8);
+    transition: all 0.2s ease;
+}
+
+.param-slider::-moz-range-thumb:hover {
+    background: #66BB6A;
+    transform: scale(1.1);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.param-slider::-moz-range-thumb:active {
+    transform: scale(1.2);
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+}
+
+/* Firefox slider track */
+.param-slider::-moz-range-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    border: none;
+}
+
+/* Current parameter slider highlighting */
+.debug-param-current .param-slider {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.debug-param-current .param-slider::-webkit-slider-thumb {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+.debug-param-current .param-slider::-moz-range-thumb {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+/* Reduce slider interactions during keyboard navigation but allow dragging */
+#debugParametersList.keyboard-navigation .param-slider {
+    /* Don't disable sliders during keyboard navigation - users should be able to use both */
+}
+
+/* Slider focus states for accessibility */
+.param-slider:focus {
+    outline: 2px solid rgba(76, 175, 80, 0.6);
+    outline-offset: 2px;
+}
+
+.param-slider:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+}
+
+.param-slider:focus::-moz-range-thumb {
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
 }
 
 /* ==========================================================================

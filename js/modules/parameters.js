@@ -217,9 +217,7 @@ export class ParameterManager {
         // These store temporary audio-reactive adjustments that are applied on top of base parameter values
         this.audioModifiers = {};
         
-        // OSC modifiers system - non-destructive parameter modification via OSC  
-        // These store hardware control adjustments that are applied on top of base parameter values
-        this.oscModifiers = {};
+        // OSC system removed
 
         // Parameter navigation arrays (existing system unchanged)
         this.parameterKeys = [
@@ -277,12 +275,6 @@ export class ParameterManager {
     getValue(key) {
         const param = this.getParameter(key);
         const baseValue = param?.value ?? 0;
-        
-        // Priority: OSC modifiers override audio modifiers (hardware takes precedence)
-        const oscModifier = this.oscModifiers[key];
-        if (oscModifier !== undefined) {
-            return oscModifier;
-        }
         
         // Apply audio modifier if present (non-destructive)
         const audioModifier = this.audioModifiers[key];
@@ -529,23 +521,5 @@ export class ParameterManager {
         return this.audioModifiers[key] !== undefined;
     }
 
-    // OSC modifiers system - for hardware parameter control
-    setOSCModifier(key, value) {
-        // Only allow OSC modifiers for parameters that exist
-        if (this.getParameter(key)) {
-            this.oscModifiers[key] = value;
-        }
-    }
-
-    resetOSCModifiers() {
-        this.oscModifiers = {};
-    }
-
-    getOSCModifier(key) {
-        return this.oscModifiers[key];
-    }
-
-    hasOSCModifier(key) {
-        return this.oscModifiers[key] !== undefined;
-    }
+    // OSC system removed
 }

@@ -18,7 +18,7 @@ export class DebugUIManager {
             audioEffects: false,     // 🎨 Which parameters audio affects
             performanceFrames: false, // 🎬 Frame performance every 60 frames
             microphoneSetup: true,   // 🎤 Microphone initialization info
-            oscMessages: false,      // 🎛️ OSC message handling
+            // OSC system removed
             parameterChanges: false, // 📊 Parameter value changes
             systemStatus: false      // 🔧 System diagnostics
         };
@@ -68,8 +68,7 @@ export class DebugUIManager {
             this.startSystemStatusUpdates();
             this.updateSystemStatus(); // Initial update
             
-            // Set up OSC listener controls (with small delay to ensure DOM is ready)
-            setTimeout(() => this.setupOSCListenerControls(), 100);
+            // OSC system removed
             
             // Provide user feedback about entering debug mode
             this.app.ui.updateStatus('DEBUG MODE: Use ↑/↓ to navigate, ←/→ to adjust', 'info');
@@ -82,8 +81,7 @@ export class DebugUIManager {
             // Stop system status monitoring
             this.stopSystemStatusUpdates();
             
-            // Clean up OSC listener controls
-            this.cleanupOSCListenerControls();
+            // OSC system removed
             
             
             // Update normal UI to reflect any changes made in debug mode

@@ -190,7 +190,7 @@ export class ControlsManager {
                 
             case 'KeyO':
                 e.preventDefault();
-                this.app.osc.toggleOSC();
+                // OSC functionality removed
                 break;
                 
             case 'Semicolon':  // THE DEBUG MODE TOGGLE

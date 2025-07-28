@@ -246,19 +246,7 @@ export class UIManager {
             }
         }
         
-        // Update OSC hardware control status
-        const allOSCStatus = document.getElementById('allOSCStatus');
-        if (allOSCStatus) {
-            const oscStatus = this.app.osc.getStatus();
-            if (oscStatus.active && oscStatus.connected) {
-                allOSCStatus.innerHTML = `🎛️ <span style="color: #4CAF50;">Hardware Connected</span><br>📡 ${oscStatus.url}<br>🔗 ${oscStatus.mappings} parameters mapped<br><em>Press O to disconnect</em>`;
-            } else if (oscStatus.active && !oscStatus.connected) {
-                const reconnectText = oscStatus.reconnectAttempts > 0 ? `(${oscStatus.reconnectAttempts}/5 reconnect attempts)` : '';
-                allOSCStatus.innerHTML = `🎛️ <span style="color: #FF9800;">Connecting...</span> ${reconnectText}<br>📡 ${oscStatus.url}<br>🔗 ${oscStatus.mappings} parameters ready<br><em>Press O to cancel</em>`;
-            } else {
-                allOSCStatus.innerHTML = '🎛️ Hardware: OFF<br>📡 Not connected<br>🔗 Arduino + Python bridge required<br><em>Press O to connect</em>';
-            }
-        }
+        // OSC system removed
     }
 
     // Set up click interaction for artistic parameters

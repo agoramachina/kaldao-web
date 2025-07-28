@@ -18,7 +18,7 @@ export class DebugUIManager {
             audioEffects: false,     // 🎨 Which parameters audio affects
             performanceFrames: false, // 🎬 Frame performance every 60 frames
             microphoneSetup: true,   // 🎤 Microphone initialization info
-            // OSC system removed
+            oscMessages: false,      // 🎛️ OSC message handling
             parameterChanges: false, // 📊 Parameter value changes
             systemStatus: false      // 🔧 System diagnostics
         };
@@ -68,7 +68,8 @@ export class DebugUIManager {
             this.startSystemStatusUpdates();
             this.updateSystemStatus(); // Initial update
             
-            // OSC system removed
+            // Set up OSC listener controls (with small delay to ensure DOM is ready)
+            setTimeout(() => this.setupOSCListenerControls(), 100);
             
             // Provide user feedback about entering debug mode
             this.app.ui.updateStatus('DEBUG MODE: Use ↑/↓ to navigate, ←/→ to adjust', 'info');
@@ -81,7 +82,8 @@ export class DebugUIManager {
             // Stop system status monitoring
             this.stopSystemStatusUpdates();
             
-            // OSC system removed
+            // Clean up OSC listener controls
+            this.cleanupOSCListenerControls();
             
             
             // Update normal UI to reflect any changes made in debug mode
@@ -787,124 +789,11 @@ export class DebugUIManager {
         }
     }
     
-    // Set up OSC listener controls in debug menu
-    setupOSCListenerControls() {
-        const hostInput = document.getElementById('debugOSCHost');
-        const portInput = document.getElementById('debugOSCPort');
-        const connectButton = document.getElementById('debugOSCConnect');
-        const statusDiv = document.getElementById('debugOSCStatus');
-        
-        if (!hostInput || !portInput || !connectButton || !statusDiv) {
-            console.warn('OSC Listener controls not found in debug menu');
-            return;
-        }
-        
-        console.log('Setting up OSC Listener controls');
-        
-        // Initialize with current OSC settings
-        const currentHost = this.app.osc.extractHost(this.app.osc.wsUrl);
-        const currentPort = this.app.osc.extractPort(this.app.osc.wsUrl);
-        hostInput.value = currentHost;
-        portInput.value = currentPort;
-        
-        // Update initial status
-        this.updateOSCListenerStatus();
-        
-        // Handle connect/disconnect button
-        connectButton.onclick = async () => {
-            console.log('OSC Connect button clicked');
-            
-            if (this.app.osc.isActive()) {
-                // Disconnect
-                console.log('Disconnecting OSC...');
-                this.app.osc.disconnect();
-                this.updateOSCListenerStatus();
-            } else {
-                // Connect with current settings
-                const host = hostInput.value.trim();
-                const port = parseInt(portInput.value);
-                
-                console.log('Attempting OSC connection:', { host, port });
-                
-                if (!host || !port || port < 1024 || port > 65535) {
-                    console.log('Invalid OSC settings:', { host, port });
-                    this.app.ui.updateStatus('Invalid OSC host or port settings', 'error');
-                    return;
-                }
-                
-                const url = `ws://${host}:${port}`;
-                console.log('Connecting to OSC URL:', url);
-                
-                try {
-                    await this.app.osc.connect(url);
-                    console.log('OSC connection attempt completed');
-                } catch (error) {
-                    console.error('OSC connection error:', error);
-                    this.app.ui.updateStatus(`OSC connection failed: ${error.message}`, 'error');
-                }
-                
-                this.updateOSCListenerStatus();
-            }
-        };
-        
-        // Handle input changes
-        const updateSettings = () => {
-            const host = hostInput.value.trim();
-            const port = parseInt(portInput.value);
-            
-            if (host && port && port >= 1024 && port <= 65535) {
-                const url = `ws://${host}:${port}`;
-                this.app.osc.setWebSocketURL(url);
-            }
-        };
-        
-        hostInput.addEventListener('input', updateSettings);
-        portInput.addEventListener('input', updateSettings);
-        
-        // Start periodic status updates (faster refresh for better responsiveness)
-        this.oscListenerStatusInterval = setInterval(() => {
-            if (this.app.debugMenuVisible) {
-                this.updateOSCListenerStatus();
-                this.updateMicrophoneStatus();
-            }
-        }, 50);
-        
-        // Set up microphone selection controls
-        this.setupMicrophoneControls();
-    }
+    // OSC system removed
     
-    // Update OSC listener status display
-    updateOSCListenerStatus() {
-        const connectButton = document.getElementById('debugOSCConnect');
-        const statusDiv = document.getElementById('debugOSCStatus');
-        
-        if (!connectButton || !statusDiv) return;
-        
-        const oscStatus = this.app.osc.getStatus();
-        
-        if (oscStatus.active && oscStatus.connected) {
-            connectButton.textContent = 'Disconnect';
-            connectButton.style.background = '#F44336';
-            statusDiv.innerHTML = `<span style="color: #4CAF50;">● Connected</span><br>${oscStatus.url}<br>${oscStatus.mappings} parameters mapped`;
-        } else if (oscStatus.active && !oscStatus.connected) {
-            connectButton.textContent = 'Cancel';
-            connectButton.style.background = '#FF9800';
-            const attempts = oscStatus.reconnectAttempts > 0 ? ` (${oscStatus.reconnectAttempts}/5)` : '';
-            statusDiv.innerHTML = `<span style="color: #FF9800;">● Connecting...</span>${attempts}<br>${oscStatus.url}`;
-        } else {
-            connectButton.textContent = 'Connect';
-            connectButton.style.background = '#4CAF50';
-            statusDiv.innerHTML = '<span style="color: #888;">○ Not connected</span><br>Arduino + Python bridge required';
-        }
-    }
+    // OSC system removed
     
-    // Clean up OSC listener controls
-    cleanupOSCListenerControls() {
-        if (this.oscListenerStatusInterval) {
-            clearInterval(this.oscListenerStatusInterval);
-            this.oscListenerStatusInterval = null;
-        }
-    }
+    // OSC system removed
     
     // Set up microphone selection controls
     async setupMicrophoneControls() {
@@ -1048,7 +937,7 @@ export class DebugUIManager {
             { key: 'audioEffects', label: '🎨 Audio Effects', desc: 'Which parameters audio modifies' },
             { key: 'performanceFrames', label: '🎬 Performance Frames', desc: 'Frame timing every 60 frames' },
             { key: 'microphoneSetup', label: '🎤 Microphone Setup', desc: 'Device initialization info' },
-            { key: 'oscMessages', label: '🎛️ OSC Messages', desc: 'Hardware control messages' },
+            // OSC system removed
             { key: 'parameterChanges', label: '📊 Parameter Changes', desc: 'When parameters are modified' },
             { key: 'systemStatus', label: '🔧 System Status', desc: 'Internal system diagnostics' }
         ];

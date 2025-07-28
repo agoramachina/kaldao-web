@@ -108,11 +108,7 @@
                     <div id="allAudioStatus" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
                 </div>
                 
-                <!-- OSC hardware control status -->
-                <div style="margin-bottom: 15px;">
-                    <h3 style="color: #FFC107; margin-bottom: 8px; font-size: 14px;">Hardware Control</h3>
-                    <div id="allOSCStatus" style="font-family: monospace; font-size: 12px; line-height: 1.3;"></div>
-                </div>
+                <!-- OSC system removed -->
                 
                 <!-- Quick reference for artistic controls -->
                 <div>
@@ -121,7 +117,7 @@
                         <strong>Navigation:</strong> ↑/↓ switch • ←/→ adjust<br>
                         <strong>Randomize:</strong> C colors • . parameters<br>
                         <strong>Reset:</strong> R current • Shift+R all<br>
-                        <strong>Audio:</strong> A upload • M microphone • O hardware<br>
+                        <strong>Audio:</strong> A upload • M microphone<br>
                         <strong>Files:</strong> S save • L load<br>
                         <strong>Undo:</strong> Ctrl+Z/Y • Space pause<br>
                         <strong>Colors:</strong> I invert • Shift+C reset<br>
@@ -221,30 +217,7 @@
                     </div>
                 </div>
                 
-                <!-- OSC LISTENER CONFIGURATION (HIDDEN) -->
-                <!-- Hardware control connection settings for Arduino parameter control -->
-                <div style="background: rgba(40, 40, 40, 0.3); border-radius: 4px; padding: 12px; margin-top: 15px; border: 1px solid #444; display: none;">
-                    <h3 style="color: #4CAF50; margin-bottom: 8px; font-size: 13px;">OSC Listener</h3>
-                    <div id="debugOSCListener" style="font-size: 9px; line-height: 1.3; color: #cccccc;">
-                        <!-- JavaScript will populate this with OSC connection settings and controls -->
-                        <div style="margin-bottom: 8px;">
-                            <label style="display: block; color: #4CAF50; font-size: 10px; margin-bottom: 3px;">Host:</label>
-                            <input type="text" id="debugOSCHost" value="localhost" 
-                                   style="width: 100%; padding: 4px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 9px;">
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <label style="display: block; color: #4CAF50; font-size: 10px; margin-bottom: 3px;">Port:</label>
-                            <input type="number" id="debugOSCPort" value="8000" min="1024" max="65535"
-                                   style="width: 100%; padding: 4px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 9px;">
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <button id="debugOSCConnect" style="width: 100%; padding: 6px; background: #4CAF50; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 9px;">Connect</button>
-                        </div>
-                        <div id="debugOSCStatus" style="font-size: 8px; color: #888;">
-                            Not connected
-                        </div>
-                    </div>
-                </div>
+                <!-- OSC system removed -->
                 
             </div>
         </div>

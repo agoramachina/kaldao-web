@@ -127,6 +127,16 @@ export class AudioSystem {
             this.app.ui.updateStatus(`🎵 Loading audio: ${file.name}...`, 'info');
             
             try {
+                // Initialize audio context if needed
+                if (!this.audioContext) {
+                    await this.initAudioContext();
+                }
+                
+                // Ensure audio context and analyser are available
+                if (!this.audioContext || !this.analyser) {
+                    throw new Error('Audio system initialization failed');
+                }
+                
                 // Clean up previous audio
                 if (this.audioElement) {
                     this.audioElement.pause();
@@ -201,132 +211,10 @@ export class AudioSystem {
     }
 
     async toggleMicrophone() {
-        if (!this.audioContext) {
-            await this.initAudioContext();
-        }
-        
-        if (this.microphoneActive) {
-            this.stopMicrophone();
-        } else {
-            // Show microphone selection popup
-            await this.showMicrophoneSelectionPopup();
-        }
+        // M key now opens advanced audio menu
+        this.showAdvancedAudioMenu();
     }
 
-    async showMicrophoneSelectionPopup() {
-        // Get available devices first
-        const devices = await this.getAvailableDevices();
-        
-        if (devices.length === 0) {
-            this.app.ui.updateStatus('No microphones found', 'error');
-            return;
-        }
-
-        // Create modal overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'microphoneSelectionOverlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Courier New', monospace;
-        `;
-
-        // Create dialog box
-        const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            background: #1a1a1a;
-            border: 2px solid #9C27B0;
-            border-radius: 8px;
-            padding: 25px;
-            max-width: 500px;
-            width: 90%;
-            color: #ffffff;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        `;
-
-        dialog.innerHTML = `
-            <h3 style="color: #9C27B0; margin-bottom: 15px; font-size: 16px;">🎤 Select Microphone</h3>
-            
-            <div style="margin-bottom: 15px; font-size: 12px; line-height: 1.4; color: #cccccc;">
-                Choose which microphone to use for audio reactivity.
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; color: #9C27B0; font-size: 13px;">Available Microphones:</label>
-                <select id="micPopupSelect" style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; font-family: 'Courier New', monospace;">
-                    <option value="">Select microphone...</option>
-                </select>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="micPopupCancel" style="padding: 8px 16px; background: #666; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Cancel</button>
-                <button id="micPopupConnect" style="padding: 8px 16px; background: #9C27B0; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Connect</button>
-            </div>
-        `;
-
-        overlay.appendChild(dialog);
-        document.body.appendChild(overlay);
-
-        // Populate device list
-        const select = document.getElementById('micPopupSelect');
-        devices.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.textContent = device.label || `Microphone ${device.deviceId.substring(0, 8)}`;
-            select.appendChild(option);
-        });
-
-        // Set default selection if we have a previously selected device
-        if (this.selectedMicrophoneId) {
-            select.value = this.selectedMicrophoneId;
-        }
-
-        // Handle button clicks
-        const cancelButton = document.getElementById('micPopupCancel');
-        const connectButton = document.getElementById('micPopupConnect');
-        
-        if (cancelButton) {
-            cancelButton.onclick = () => {
-                document.body.removeChild(overlay);
-            };
-        }
-
-        if (connectButton) {
-            connectButton.onclick = async () => {
-                const selectedDeviceId = select.value;
-                if (!selectedDeviceId) {
-                    alert('Please select a microphone');
-                    return;
-                }
-
-                document.body.removeChild(overlay);
-                
-                // Set selected device and start
-                this.selectedMicrophoneId = selectedDeviceId;
-                await this.startMicrophone(selectedDeviceId);
-            };
-        }
-
-        // Handle Enter/Escape keys
-        dialog.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                if (connectButton) connectButton.click();
-            } else if (e.key === 'Escape') {
-                if (cancelButton) cancelButton.click();
-            }
-        });
-
-        // Focus the select
-        setTimeout(() => select.focus(), 100);
-    }
 
     async getAvailableDevices() {
         try {
@@ -341,6 +229,11 @@ export class AudioSystem {
 
     async startMicrophone(deviceId = null) {
         try {
+            // Ensure audio context is initialized first
+            if (!this.audioContext) {
+                await this.initAudioContext();
+            }
+            
             this.app.ui.updateStatus('🎤 Requesting microphone access...', 'info');
             
             // Use specified device or the selected one
@@ -421,6 +314,11 @@ export class AudioSystem {
             this.app.ui.updateStatus('🎤 Microphone active with reactivity!', 'success');
             this.app.ui.updateMenuDisplay();
             
+            // Update advanced menu status if open
+            if (this.advancedMenuVisible) {
+                this.updateAdvancedMicrophoneStatus();
+            }
+            
         } catch (error) {
             console.error('Microphone access error:', error);
             let errorMessage = 'Failed to access microphone';
@@ -458,6 +356,11 @@ export class AudioSystem {
             
             this.app.ui.updateStatus('🎤 Microphone stopped', 'info');
             this.app.ui.updateMenuDisplay();
+            
+            // Update advanced menu status if open
+            if (this.advancedMenuVisible) {
+                this.updateAdvancedMicrophoneStatus();
+            }
             
         } catch (error) {
             console.error('Error stopping microphone:', error);
@@ -738,22 +641,22 @@ export class AudioSystem {
             </div>
             
             <!-- Two Column Layout -->
-            <div style="display: flex; gap: 15px; height: 70vh;">
+            <div style="display: flex; gap: 15px; height: 80vh;">
                 
                 <!-- Left Column: Equalizer Visualization + Controls -->
-                <div style="flex: 0 0 380px; display: flex; flex-direction: column; gap: 15px;">
+                <div style="flex: 0 0 380px; display: flex; flex-direction: column; gap: 12px;">
                     
                     <!-- Equalizer Visualization Section -->
-                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444;">
-                        <h3 style="color: #4CAF50; margin-bottom: 15px; font-size: 14px;">📊 Real-Time Frequency Analysis</h3>
+                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 12px; border: 1px solid #444;">
+                        <h3 style="color: #4CAF50; margin-bottom: 12px; font-size: 14px;">📊 Real-Time Frequency Analysis</h3>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; font-size: 12px; margin-bottom: 8px;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: flex; align-items: center; font-size: 12px; margin-bottom: 6px;">
                                 <input type="checkbox" id="beatDetectionToggle" ${this.beatDetection.enabled ? 'checked' : ''} style="margin-right: 8px;">
                                 Enable Beat Detection
                             </label>
                             
-                            <div style="display: flex; align-items: center; gap: 10px; font-size: 11px; margin-bottom: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px; font-size: 11px; margin-bottom: 6px;">
                                 <label>Beat Sensitivity:</label>
                                 <input type="range" id="beatThreshold" min="1.1" max="2.0" step="0.1" value="${this.beatDetection.threshold}" 
                                        style="flex: 1;">
@@ -762,7 +665,7 @@ export class AudioSystem {
                         </div>
                         
                         <!-- 10-Band Equalizer Display -->
-                        <div id="equalizerDisplay" style="display: flex; align-items: end; gap: 3px; height: 180px; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px;">
+                        <div id="equalizerDisplay" style="display: flex; align-items: end; gap: 3px; height: 120px; margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px;">
                             <!-- Equalizer bars will be populated by JavaScript -->
                         </div>
                         
@@ -771,15 +674,47 @@ export class AudioSystem {
                         </div>
                     </div>
                     
-                    <!-- Control Buttons Section -->
-                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444;">
-                        <h3 style="color: #9C27B0; margin-bottom: 15px; font-size: 14px;">💾 Mapping Controls</h3>
+                    <!-- Microphone Selection Section -->
+                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 12px; border: 1px solid #444;">
+                        <h3 style="color: #9C27B0; margin-bottom: 12px; font-size: 14px;">🎤 Microphone Selection</h3>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                            <button id="resetMappings" style="padding: 8px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Reset All</button>
-                            <button id="presetMappings" style="padding: 8px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load Preset</button>
-                            <button id="saveMappings" style="padding: 8px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Save Mappings</button>
-                            <button id="loadMappings" style="padding: 8px; background: #FF9800; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load From File</button>
+                        <div style="font-size: 11px; line-height: 1.3; color: #cccccc; margin-bottom: 10px;">
+                            Select audio input device for reactivity
+                        </div>
+                        
+                        <div style="margin-bottom: 10px;">
+                            <select id="advancedMicrophoneSelect" style="width: 100%; padding: 6px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 11px;">
+                                <option value="">Select microphone...</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                            <button id="advancedMicrophoneRefresh" style="flex: 1; padding: 6px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Refresh</button>
+                            <button id="advancedMicrophoneConnect" style="flex: 2; padding: 6px; background: #9C27B0; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Connect</button>
+                        </div>
+                        
+                        <div id="advancedMicrophoneStatus" style="font-size: 10px; color: #888; margin-bottom: 10px;">
+                            Not connected
+                        </div>
+                        
+                        <div id="advancedMicrophoneVolumeBar" style="display: none;">
+                            <div style="font-size: 10px; color: #9C27B0; margin-bottom: 4px;">Volume Level:</div>
+                            <div style="background: #333; border-radius: 3px; height: 14px; position: relative; border: 1px solid #555;">
+                                <div id="advancedMicrophoneVolumeLevel" style="background: linear-gradient(90deg, #4CAF50 0%, #FFC107 70%, #F44336 100%); height: 100%; border-radius: 2px; width: 0%; transition: width 0.1s ease;"></div>
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; font-weight: bold;" id="advancedMicrophoneVolumeText">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Control Buttons Section -->
+                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 12px; border: 1px solid #444;">
+                        <h3 style="color: #9C27B0; margin-bottom: 12px; font-size: 14px;">💾 Mapping Controls</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <button id="resetMappings" style="padding: 6px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Reset All</button>
+                            <button id="loadMappings" style="padding: 6px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load Mappings</button>
+                            <button id="saveMappings" style="padding: 6px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Save Mappings</button>
+                            <button id="loadAudio" style="padding: 6px; background: #FF9800; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load Audio</button>
                         </div>
                     </div>
                     
@@ -863,6 +798,118 @@ export class AudioSystem {
                 this.hideAdvancedAudioMenu();
             }
         });
+        
+        // Advanced microphone controls
+        this.setupAdvancedMicrophoneHandlers();
+    }
+    
+    async setupAdvancedMicrophoneHandlers() {
+        // Populate microphone devices
+        await this.populateAdvancedMicrophoneList();
+        
+        // Refresh button
+        const refreshBtn = document.getElementById('advancedMicrophoneRefresh');
+        if (refreshBtn) {
+            refreshBtn.onclick = async () => {
+                await this.populateAdvancedMicrophoneList();
+                this.updateAdvancedMicrophoneStatus();
+            };
+        }
+        
+        // Connect button
+        const connectBtn = document.getElementById('advancedMicrophoneConnect');
+        if (connectBtn) {
+            connectBtn.onclick = async () => {
+                const select = document.getElementById('advancedMicrophoneSelect');
+                const selectedDeviceId = select ? select.value : '';
+                
+                if (this.microphoneActive) {
+                    // Disconnect current microphone
+                    this.stopMicrophone();
+                } else {
+                    if (!selectedDeviceId) {
+                        this.app.ui.updateStatus('Please select a microphone first', 'error');
+                        return;
+                    }
+                    
+                    // Ensure audio context is initialized before connecting
+                    if (!this.audioContext) {
+                        await this.initAudioContext();
+                    }
+                    
+                    // Connect to selected microphone
+                    this.selectedMicrophoneId = selectedDeviceId;
+                    await this.startMicrophone(selectedDeviceId);
+                }
+                
+                this.updateAdvancedMicrophoneStatus();
+            };
+        }
+        
+        // Update initial status
+        this.updateAdvancedMicrophoneStatus();
+    }
+    
+    async populateAdvancedMicrophoneList() {
+        const select = document.getElementById('advancedMicrophoneSelect');
+        if (!select) return;
+        
+        try {
+            const devices = await this.getAvailableDevices();
+            
+            // Clear existing options except the first one
+            select.innerHTML = '<option value="">Select microphone...</option>';
+            
+            // Add device options
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || `Microphone ${device.deviceId.substring(0, 8)}`;
+                if (device.deviceId === this.selectedMicrophoneId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Error populating microphone list:', error);
+        }
+    }
+    
+    updateAdvancedMicrophoneStatus() {
+        const statusElement = document.getElementById('advancedMicrophoneStatus');
+        const connectBtn = document.getElementById('advancedMicrophoneConnect');
+        const volumeBar = document.getElementById('advancedMicrophoneVolumeBar');
+        
+        if (this.microphoneActive) {
+            if (statusElement) statusElement.textContent = 'Connected and active';
+            if (statusElement) statusElement.style.color = '#4CAF50';
+            if (connectBtn) connectBtn.textContent = 'Disconnect';
+            if (connectBtn) connectBtn.style.background = '#F44336';
+            if (volumeBar) volumeBar.style.display = 'block';
+        } else {
+            if (statusElement) statusElement.textContent = 'Not connected';
+            if (statusElement) statusElement.style.color = '#888';
+            if (connectBtn) connectBtn.textContent = 'Connect';
+            if (connectBtn) connectBtn.style.background = '#9C27B0';
+            if (volumeBar) volumeBar.style.display = 'none';
+        }
+    }
+    
+    updateAdvancedMicrophoneVolumeLevel() {
+        if (!this.microphoneActive) return;
+        
+        const volumeLevel = this.getCurrentVolumeLevel();
+        const volumeBar = document.getElementById('advancedMicrophoneVolumeLevel');
+        const volumeText = document.getElementById('advancedMicrophoneVolumeText');
+        
+        if (volumeBar) {
+            volumeBar.style.width = `${volumeLevel * 100}%`;
+        }
+        
+        if (volumeText) {
+            volumeText.textContent = `${Math.round(volumeLevel * 100)}%`;
+        }
     }
     
     updateEqualizerDisplay() {
@@ -985,11 +1032,11 @@ export class AudioSystem {
             };
         }
         
-        // Preset mappings button
-        const presetBtn = document.getElementById('presetMappings');
-        if (presetBtn) {
-            presetBtn.onclick = () => {
-                this.loadPresetMappings();
+        // Load mappings button
+        const loadMappingsBtn = document.getElementById('loadMappings');
+        if (loadMappingsBtn) {
+            loadMappingsBtn.onclick = () => {
+                this.loadMappingsFromFile();
             };
         }
         
@@ -1001,11 +1048,11 @@ export class AudioSystem {
             };
         }
         
-        // Load mappings button
-        const loadBtn = document.getElementById('loadMappings');
-        if (loadBtn) {
-            loadBtn.onclick = () => {
-                this.loadMappingsFromFile();
+        // Load audio button
+        const loadAudioBtn = document.getElementById('loadAudio');
+        if (loadAudioBtn) {
+            loadAudioBtn.onclick = () => {
+                this.uploadAudioFile();
             };
         }
     }
@@ -1137,6 +1184,7 @@ export class AudioSystem {
         this.equalizerUpdateInterval = setInterval(() => {
             if (this.advancedMenuVisible && this.audioReactive) {
                 this.updateEqualizerDisplay();
+                this.updateAdvancedMicrophoneVolumeLevel();
             }
         }, 50); // 20 FPS update rate
     }

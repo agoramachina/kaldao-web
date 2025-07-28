@@ -220,12 +220,7 @@ export class ColorManager {
             }
         };
         
-        // Escape key to close
-        document.addEventListener('keydown', this.handleAdvancedColorMenuKeydown = (e) => {
-            if (e.key === 'Escape' && this.advancedColorMenuVisible) {
-                this.hideAdvancedColorMenu();
-            }
-        });
+        // ESC key handling moved to main controls.js for better coordination
         
         // Set up color control handlers
         this.setupColorControlHandlers();
@@ -549,10 +544,7 @@ export class ColorManager {
             this.colorPreviewUpdateInterval = null;
         }
         
-        if (this.handleAdvancedColorMenuKeydown) {
-            document.removeEventListener('keydown', this.handleAdvancedColorMenuKeydown);
-            this.handleAdvancedColorMenuKeydown = null;
-        }
+        // Event listener cleanup no longer needed - handled by main controls
     }
 
     // Color palette state management 

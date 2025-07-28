@@ -163,7 +163,14 @@ export class ControlsManager {
                 
             case 'Escape':
                 e.preventDefault();
-                this.app.ui.toggleMenu();
+                // Check if any advanced menus are open first
+                if (this.app.audio.advancedMenuVisible) {
+                    this.app.audio.hideAdvancedAudioMenu();
+                } else if (this.app.color.advancedColorMenuVisible) {
+                    this.app.color.hideAdvancedColorMenu();
+                } else {
+                    this.app.ui.toggleMenu();
+                }
                 break;
                 
             // KeyA removed - audio functionality is now in advanced audio menu (Shift+M)
@@ -295,7 +302,14 @@ export class ControlsManager {
                 
             case 'Escape':
                 e.preventDefault();
-                this.app.debugUI.toggleDebugMenu();
+                // Check if any advanced menus are open first
+                if (this.app.audio.advancedMenuVisible) {
+                    this.app.audio.hideAdvancedAudioMenu();
+                } else if (this.app.color.advancedColorMenuVisible) {
+                    this.app.color.hideAdvancedColorMenu();
+                } else {
+                    this.app.debugUI.toggleDebugMenu();
+                }
                 break;
                 
             case 'Semicolon':  // SEMICOLON EXITS DEBUG MODE

@@ -788,12 +788,7 @@ export class AudioSystem {
             }
         };
         
-        // Escape key to close
-        document.addEventListener('keydown', this.handleAdvancedMenuKeydown = (e) => {
-            if (e.key === 'Escape' && this.advancedMenuVisible) {
-                this.hideAdvancedAudioMenu();
-            }
-        });
+        // ESC key handling moved to main controls.js for better coordination
         
         // Advanced microphone controls
         this.setupAdvancedMicrophoneHandlers();
@@ -1326,9 +1321,6 @@ export class AudioSystem {
             this.equalizerUpdateInterval = null;
         }
         
-        if (this.handleAdvancedMenuKeydown) {
-            document.removeEventListener('keydown', this.handleAdvancedMenuKeydown);
-            this.handleAdvancedMenuKeydown = null;
-        }
+        // Event listener cleanup no longer needed - handled by main controls
     }
 }

@@ -24,6 +24,25 @@ export class ColorManager {
             { name: "Neon", a: [0.2, 0.2, 0.2], b: [0.8, 0.8, 0.8], c: [1.0, 2.0, 1.5], d: [0.0, 0.5, 0.8] },
             { name: "Sunset", a: [0.7, 0.3, 0.2], b: [0.3, 0.2, 0.1], c: [1.5, 1.0, 0.8], d: [0.0, 0.1, 0.3] }
         ];
+        
+        // Layer color system - discrete colors assigned to specific layers
+        this.layerColorPalettes = [
+            { 
+                name: "Default", 
+                colors: [
+                    "#8E24AA", "#1976D2", "#00796B", "#388E3C", "#F57C00", 
+                    "#E64A19", "#C62828", "#AD1457", "#6A1B9A", "#4527A0", 
+                    "#D32F2F", "#455A64"
+                ]
+            },
+            { 
+                name: "Sunset", 
+                colors: ["#F9C80E", "#F86624", "#EA3546", "#662E9B", "#43BCCD"]
+            }
+        ];
+        
+        // Track current layer palette index
+        this.currentLayerPaletteIndex = 0;
     }
 
     init(app) {
@@ -228,7 +247,12 @@ export class ColorManager {
         
         if (prevBtn) {
             prevBtn.onclick = () => {
-                this.app.currentPaletteIndex = Math.max(0, this.app.currentPaletteIndex - 1);
+                const colorMode = this.app.parameters.getValue('color_mode');
+                if (colorMode > 1.5) { // Layer Colors mode
+                    this.currentLayerPaletteIndex = Math.max(0, this.currentLayerPaletteIndex - 1);
+                } else { // Original Palette mode
+                    this.app.currentPaletteIndex = Math.max(0, this.app.currentPaletteIndex - 1);
+                }
                 this.updateColorPreview();
                 this.updateColorModeControls();
                 this.populateColorComponentEditor();
@@ -237,7 +261,12 @@ export class ColorManager {
         
         if (nextBtn) {
             nextBtn.onclick = () => {
-                this.app.currentPaletteIndex = Math.min(this.colorPalettes.length - 1, this.app.currentPaletteIndex + 1);
+                const colorMode = this.app.parameters.getValue('color_mode');
+                if (colorMode > 1.5) { // Layer Colors mode
+                    this.currentLayerPaletteIndex = Math.min(this.layerColorPalettes.length - 1, this.currentLayerPaletteIndex + 1);
+                } else { // Original Palette mode
+                    this.app.currentPaletteIndex = Math.min(this.colorPalettes.length - 1, this.app.currentPaletteIndex + 1);
+                }
                 this.updateColorPreview();
                 this.updateColorModeControls();
                 this.populateColorComponentEditor();
@@ -296,6 +325,8 @@ export class ColorManager {
                     
                     this.app.ui.updateDisplay();
                     this.updateColorPreview();
+                    this.updateColorModeControls(); // Update dropdown to show correct palette list
+                    this.populateColorComponentEditor(); // Update editor interface
                 }
             };
         });
@@ -311,10 +342,22 @@ export class ColorManager {
         if (paletteSelector) {
             paletteSelector.onchange = () => {
                 if (paletteSelector.value === 'new') {
-                    this.createNewPalette();
+                    const colorMode = this.app.parameters.getValue('color_mode');
+                    if (colorMode > 1.5) {
+                        this.createNewLayerPalette();
+                    } else {
+                        this.createNewPalette();
+                    }
                     return;
                 }
-                this.app.currentPaletteIndex = parseInt(paletteSelector.value);
+                
+                const colorMode = this.app.parameters.getValue('color_mode');
+                if (colorMode > 1.5) { // Layer Colors mode
+                    this.currentLayerPaletteIndex = parseInt(paletteSelector.value);
+                } else { // Original Palette mode
+                    this.app.currentPaletteIndex = parseInt(paletteSelector.value);
+                }
+                
                 this.updateColorPreview();
                 this.populateColorComponentEditor();
                 this.app.ui.updateDisplay();
@@ -370,14 +413,13 @@ export class ColorManager {
         if (preview && currentIndex) {
             const colorMode = this.app.parameters.getValue('color_mode');
             
-            // Update palette index display
-            currentIndex.textContent = this.colorPalettes[this.app.currentPaletteIndex].name;
-            
             if (colorMode < 0.5) {
                 // Mode 0: Black & White
+                currentIndex.textContent = this.colorPalettes[this.app.currentPaletteIndex].name;
                 preview.style.background = 'linear-gradient(90deg, #000000 0%, #ffffff 50%, #000000 100%)';
             } else if (colorMode < 1.5) {
                 // Mode 1: Original Palette System
+                currentIndex.textContent = this.colorPalettes[this.app.currentPaletteIndex].name;
                 const palette = this.colorPalettes[this.app.currentPaletteIndex];
                 if (palette && this.app.currentPaletteIndex > 0) {
                     // Generate color samples across the palette
@@ -398,12 +440,20 @@ export class ColorManager {
                 }
             } else {
                 // Mode 2: Layer Colors
-                const layerColors = [
-                    '#8E24AA', '#1976D2', '#00796B', '#388E3C', '#F57C00', 
-                    '#E64A19', '#C62828', '#AD1457', '#6A1B9A', '#4527A0', 
-                    '#D32F2F', '#455A64'
-                ];
-                preview.style.background = `linear-gradient(90deg, ${layerColors.join(', ')})`;
+                const layerPalette = this.layerColorPalettes[this.currentLayerPaletteIndex];
+                currentIndex.textContent = layerPalette ? layerPalette.name : 'Default';
+                
+                if (layerPalette && layerPalette.colors.length > 0) {
+                    preview.style.background = `linear-gradient(90deg, ${layerPalette.colors.join(', ')})`;
+                } else {
+                    // Fallback to default colors
+                    const defaultColors = [
+                        '#8E24AA', '#1976D2', '#00796B', '#388E3C', '#F57C00', 
+                        '#E64A19', '#C62828', '#AD1457', '#6A1B9A', '#4527A0', 
+                        '#D32F2F', '#455A64'
+                    ];
+                    preview.style.background = `linear-gradient(90deg, ${defaultColors.join(', ')})`;
+                }
             }
         }
     }
@@ -424,16 +474,32 @@ export class ColorManager {
         }
         
         if (paletteSelector) {
-            // Populate palette options
-            let options = this.colorPalettes.map((palette, index) => 
-                `<option value="${index}">${palette.name}</option>`
-            ).join('');
+            const colorMode = this.app.parameters.getValue('color_mode');
+            let options = '';
             
-            // Add "New palette..." option at the end
-            options += `<option value="new">New palette...</option>`;
-            
-            paletteSelector.innerHTML = options;
-            paletteSelector.value = this.app.currentPaletteIndex;
+            if (colorMode > 1.5) { // Mode 2: Layer Colors
+                // Show layer color palettes
+                options = this.layerColorPalettes.map((palette, index) => 
+                    `<option value="${index}">${palette.name}</option>`
+                ).join('');
+                
+                // Add "New palette..." option at the end
+                options += `<option value="new">New palette...</option>`;
+                
+                paletteSelector.innerHTML = options;
+                paletteSelector.value = this.currentLayerPaletteIndex;
+            } else {
+                // Show original mathematical palettes
+                options = this.colorPalettes.map((palette, index) => 
+                    `<option value="${index}">${palette.name}</option>`
+                ).join('');
+                
+                // Add "New palette..." option at the end
+                options += `<option value="new">New palette...</option>`;
+                
+                paletteSelector.innerHTML = options;
+                paletteSelector.value = this.app.currentPaletteIndex;
+            }
         }
     }
     
@@ -441,8 +507,14 @@ export class ColorManager {
         const container = document.getElementById('colorComponentEditor');
         if (!container) return;
         
-        const palette = this.colorPalettes[this.app.currentPaletteIndex];
         const colorMode = this.app.parameters.getValue('color_mode');
+        
+        if (colorMode > 1.5) { // Mode 2: Layer Colors
+            this.populateLayerColorEditor(container);
+            return;
+        }
+        
+        const palette = this.colorPalettes[this.app.currentPaletteIndex];
         
         // Show B&W editing only when Original Palette System is selected (mode 1)
         if (!palette || (this.app.currentPaletteIndex === 0 && colorMode < 0.5)) {
@@ -634,24 +706,47 @@ export class ColorManager {
                 try {
                     const presetData = JSON.parse(event.target.result);
                     
-                    // Validate the preset data structure
-                    if (!presetData.colorPalettes || !Array.isArray(presetData.colorPalettes)) {
-                        throw new Error('Invalid preset format: missing colorPalettes array');
+                    // Determine preset type and validate
+                    if (presetData.type === 'layer-colors') {
+                        // Layer colors preset
+                        if (!presetData.layerColorPalettes || !Array.isArray(presetData.layerColorPalettes)) {
+                            throw new Error('Invalid layer colors preset format: missing layerColorPalettes array');
+                        }
+                        
+                        // Load the layer palettes
+                        this.layerColorPalettes = presetData.layerColorPalettes;
+                        this.currentLayerPaletteIndex = 0;
+                        
+                        // Switch to layer colors mode if not already
+                        this.app.parameters.setValue('color_mode', 2.0);
+                        
+                        this.app.ui.updateStatus(`Loaded layer colors preset: ${file.name}`, 'success');
+                        
+                    } else if (presetData.type === 'mathematical-palettes' || presetData.colorPalettes) {
+                        // Mathematical palettes preset (includes legacy format)
+                        const palettes = presetData.colorPalettes;
+                        if (!palettes || !Array.isArray(palettes)) {
+                            throw new Error('Invalid mathematical preset format: missing colorPalettes array');
+                        }
+                        
+                        // Load the mathematical palettes
+                        this.colorPalettes = palettes;
+                        this.app.currentPaletteIndex = 0;
+                        
+                        // Switch to original palette mode if not already
+                        this.app.parameters.setValue('color_mode', 1.0);
+                        
+                        this.app.ui.updateStatus(`Loaded mathematical color preset: ${file.name}`, 'success');
+                        
+                    } else {
+                        throw new Error('Unknown preset format or missing type information');
                     }
-                    
-                    // Load the palettes
-                    this.colorPalettes = presetData.colorPalettes;
-                    
-                    // Reset to first palette
-                    this.app.currentPaletteIndex = 0;
                     
                     // Update displays
                     this.updateColorPreview();
                     this.updateColorModeControls();
                     this.populateColorComponentEditor();
                     this.app.ui.updateDisplay();
-                    
-                    this.app.ui.updateStatus(`Loaded color preset: ${file.name}`, 'success');
                     
                 } catch (error) {
                     this.app.ui.updateStatus(`Failed to load preset: ${error.message}`, 'error');
@@ -667,27 +762,258 @@ export class ColorManager {
     
     // Save color preset to file
     saveColorPreset() {
-        const presetData = {
-            version: '1.0',
-            timestamp: new Date().toISOString(),
-            colorPalettes: this.colorPalettes
-        };
+        const colorMode = this.app.parameters.getValue('color_mode');
+        
+        let presetData, filename;
+        
+        if (colorMode > 1.5) { // Layer Colors mode
+            presetData = {
+                version: '1.0',
+                type: 'layer-colors',
+                timestamp: new Date().toISOString(),
+                layerColorPalettes: this.layerColorPalettes
+            };
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            filename = `kaldao-layer-colors-preset-${timestamp}.json`;
+        } else { // Original Palette mode
+            presetData = {
+                version: '1.0',
+                type: 'mathematical-palettes',
+                timestamp: new Date().toISOString(),
+                colorPalettes: this.colorPalettes
+            };
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            filename = `kaldao-color-preset-${timestamp}.json`;
+        }
         
         const dataStr = JSON.stringify(presetData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         
         const link = document.createElement('a');
         link.href = URL.createObjectURL(dataBlob);
-        
-        // Generate filename with timestamp
-        const timestamp = new Date().toISOString().split('T')[0];
-        link.download = `kaldao-color-preset-${timestamp}.json`;
+        link.download = filename;
         
         link.click();
         
         // Clean up the URL object
         setTimeout(() => URL.revokeObjectURL(link.href), 100);
         
-        this.app.ui.updateStatus('Color preset saved', 'success');
+        const presetType = colorMode > 1.5 ? 'layer color' : 'mathematical color';
+        this.app.ui.updateStatus(`${presetType} preset saved`, 'success');
+    }
+    
+    // Layer Color System Methods
+    populateLayerColorEditor(container) {
+        const palette = this.layerColorPalettes[this.currentLayerPaletteIndex];
+        
+        if (!palette) {
+            container.innerHTML = `
+                <div style="text-align: center; color: #666; font-style: italic; padding: 40px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🎨</div>
+                    <div>No layer palette selected</div>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="color: #E91E63; margin: 0 0 10px 0; font-size: 12px;">
+                    Layer Colors: ${palette.name}
+                    <span style="color: #999; font-size: 10px; font-weight: normal; margin-left: 8px;">
+                        Each color represents a different depth layer
+                    </span>
+                </h4>
+            </div>
+            
+            <div id="layerColorList" style="margin-bottom: 15px;">
+                ${palette.colors.map((color, index) => `
+                    <div class="layer-color-item" data-index="${index}" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;">
+                        <div class="color-preview" 
+                             style="width: 30px; height: 30px; background: ${color}; border: 2px solid #555; border-radius: 4px; cursor: pointer;"
+                             data-index="${index}"></div>
+                        <input type="text" 
+                               class="color-hex-input" 
+                               value="${color}" 
+                               data-index="${index}"
+                               style="flex: 1; padding: 6px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; font-family: monospace; font-size: 11px;">
+                        <button class="remove-color-btn" 
+                                data-index="${index}"
+                                style="padding: 6px 8px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;">
+                            ✕
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button id="addLayerColor" 
+                        style="flex: 1; padding: 8px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px;">
+                    + Add Color
+                </button>
+                <button id="resetLayerColors" 
+                        style="flex: 1; padding: 8px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px;">
+                    Reset
+                </button>
+            </div>
+        `;
+        
+        this.setupLayerColorEventHandlers();
+    }
+    
+    setupLayerColorEventHandlers() {
+        // Color preview squares - open color picker
+        document.querySelectorAll('.color-preview').forEach(preview => {
+            preview.onclick = () => {
+                const index = parseInt(preview.dataset.index);
+                this.openColorPicker(index);
+            };
+        });
+        
+        // Hex input fields
+        document.querySelectorAll('.color-hex-input').forEach(input => {
+            input.onchange = () => {
+                const index = parseInt(input.dataset.index);
+                const color = input.value;
+                if (this.isValidHexColor(color)) {
+                    this.updateLayerColor(index, color);
+                } else {
+                    // Revert to previous value
+                    input.value = this.layerColorPalettes[this.currentLayerPaletteIndex].colors[index];
+                    this.app.ui.updateStatus('Invalid hex color format', 'error');
+                }
+            };
+        });
+        
+        // Remove color buttons
+        document.querySelectorAll('.remove-color-btn').forEach(btn => {
+            btn.onclick = () => {
+                const index = parseInt(btn.dataset.index);
+                this.removeLayerColor(index);
+            };
+        });
+        
+        // Add color button
+        const addBtn = document.getElementById('addLayerColor');
+        if (addBtn) {
+            addBtn.onclick = () => {
+                this.addLayerColor();
+            };
+        }
+        
+        // Reset colors button
+        const resetBtn = document.getElementById('resetLayerColors');
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                this.resetLayerColors();
+            };
+        }
+    }
+    
+    openColorPicker(index) {
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = this.layerColorPalettes[this.currentLayerPaletteIndex].colors[index];
+        
+        input.onchange = () => {
+            this.updateLayerColor(index, input.value.toUpperCase());
+        };
+        
+        input.click();
+    }
+    
+    updateLayerColor(index, color) {
+        this.layerColorPalettes[this.currentLayerPaletteIndex].colors[index] = color;
+        this.populateColorComponentEditor();
+        this.updateColorPreview();
+        this.app.ui.updateDisplay();
+    }
+    
+    addLayerColor() {
+        const newColor = '#FFFFFF';
+        this.layerColorPalettes[this.currentLayerPaletteIndex].colors.push(newColor);
+        this.populateColorComponentEditor();
+        this.updateColorPreview();
+        this.app.ui.updateDisplay();
+        this.app.ui.updateStatus('Added new layer color', 'success');
+    }
+    
+    removeLayerColor(index) {
+        const palette = this.layerColorPalettes[this.currentLayerPaletteIndex];
+        if (palette.colors.length <= 1) {
+            this.app.ui.updateStatus('Cannot remove last color', 'error');
+            return;
+        }
+        
+        palette.colors.splice(index, 1);
+        this.populateColorComponentEditor();
+        this.updateColorPreview();
+        this.app.ui.updateDisplay();
+        this.app.ui.updateStatus('Removed layer color', 'success');
+    }
+    
+    resetLayerColors() {
+        const currentName = this.layerColorPalettes[this.currentLayerPaletteIndex].name;
+        
+        if (currentName === 'Default') {
+            this.layerColorPalettes[this.currentLayerPaletteIndex].colors = [
+                "#8E24AA", "#1976D2", "#00796B", "#388E3C", "#F57C00", 
+                "#E64A19", "#C62828", "#AD1457", "#6A1B9A", "#4527A0", 
+                "#D32F2F", "#455A64"
+            ];
+        } else if (currentName === 'Sunset') {
+            this.layerColorPalettes[this.currentLayerPaletteIndex].colors = [
+                "#F9C80E", "#F86624", "#EA3546", "#662E9B", "#43BCCD"
+            ];
+        } else {
+            // Custom palette - reset to a basic set
+            this.layerColorPalettes[this.currentLayerPaletteIndex].colors = [
+                "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"
+            ];
+        }
+        
+        this.populateColorComponentEditor();
+        this.updateColorPreview();
+        this.app.ui.updateDisplay();
+        this.app.ui.updateStatus(`Reset ${currentName} palette colors`, 'success');
+    }
+    
+    createNewLayerPalette() {
+        const paletteName = prompt('Enter name for new layer palette:', `Custom Layer ${this.layerColorPalettes.length + 1}`);
+        if (!paletteName) {
+            // User cancelled, reset selector to current palette
+            const paletteSelector = document.getElementById('paletteSelector');
+            if (paletteSelector) {
+                paletteSelector.value = this.currentLayerPaletteIndex;
+            }
+            return;
+        }
+        
+        // Create new layer palette with basic colors
+        const newPalette = {
+            name: paletteName,
+            colors: ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF']
+        };
+        
+        // Add to palette array
+        this.layerColorPalettes.push(newPalette);
+        
+        // Switch to the new palette
+        this.currentLayerPaletteIndex = this.layerColorPalettes.length - 1;
+        
+        // Update displays
+        this.updateColorPreview();
+        this.updateColorModeControls();
+        this.populateColorComponentEditor();
+        this.app.ui.updateDisplay();
+        
+        // Show success message
+        this.app.ui.updateStatus(`Created new layer palette: ${paletteName}`, 'success');
+    }
+    
+    isValidHexColor(hex) {
+        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(hex);
     }
 }

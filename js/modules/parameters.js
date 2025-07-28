@@ -10,10 +10,10 @@ export class ParameterManager {
         this.parameters = {
             fly_speed: { value: 0.25, min: -3.0, max: 3.0, step: 0.1, name: "Fly Speed" },
             contrast: { value: 1.0, min: 0.1, max: 5.0, step: 0.1, name: "Contrast" },
-            kaleidoscope_segments: { value: 10.0, min: 4.0, max: 80.0, step: 2.0, name: "Kaleidoscope Segments" },
+            kaleidoscope_segments: { value: 10.0, min: 4.0, max: 400.0, step: 2.0, name: "Kaleidoscope Segments" },
             truchet_radius: { value: 0.35, min: -1.0, max: 1.0, step: 0.01, name: "Truchet Radius" },
             center_fill_radius: { value: 0.0, min: -2.0, max: 2.0, step: 0.01, name: "Center Fill Radius" },
-            layer_count: { value: 6, min: 1, max: 10, step: 1, name: "Layer Count" },
+            layer_count: { value: 6, min: 1, max: 50, step: 1, name: "Layer Count" },
             rotation_speed: { value: 0.025, min: -6.0, max: 6.0, step: 0.01, name: "Rotation Speed" },
             zoom_level: { value: 0.3, min: -5.0, max: 5.0, step: 0.05, name: "Zoom Level" },
             color_intensity: { value: 1.0, min: 0.1, max: 2.0, step: 0.1, name: "Color Intensity" },
@@ -35,7 +35,7 @@ export class ParameterManager {
             // The layer system creates depth by rendering multiple planes at different distances
             layer_distance: { 
                 value: 0.75,        // Default: planeDist = 1.0 - 0.25 = 0.75
-                min: 0.1, max: 3.0, step: 0.05, 
+                min: 0.1, max: 3.0, step: 0.01, 
                 name: "Layer Distance" 
             },
             layer_fade_start: { 
@@ -50,17 +50,17 @@ export class ParameterManager {
             },
             layer_alpha_base: { 
                 value: 0.5,         // Default: mix(0.5, 1.0, ...) base value
-                min: 0.0, max: 1.0, step: 0.05, 
+                min: 0.0, max: 1.0, step: 0.01, 
                 name: "Layer Alpha Base" 
             },
             layer_alpha_range: { 
                 value: 0.5,         // Default: mix range (1.0 - 0.5 = 0.5)
-                min: 0.0, max: 1.0, step: 0.05, 
+                min: 0.0, max: 1.0, step: 0.01, 
                 name: "Layer Alpha Range" 
             },
             layer_cutoff: { 
                 value: 0.95,        // Default: cutOff = 0.95
-                min: 0.1, max: 1.0, step: 0.05, 
+                min: 0.1, max: 1.0, step: 0.01, 
                 name: "Layer Cutoff" 
             },
 
@@ -184,7 +184,7 @@ export class ParameterManager {
             },
             detail_frequency: { 
                 value: 100.0,       // Default: sin(PI * 100.0 * d) for detail generation
-                min: 10.0, max: 500.0, step: 10.0, 
+                min: 0.0, max: 500.0, step: 1.0, 
                 name: "Detail Frequency" 
             },
             truchet_diagonal_threshold: { 

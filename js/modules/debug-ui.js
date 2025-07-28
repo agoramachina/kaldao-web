@@ -52,6 +52,10 @@ export class DebugUIManager {
             // Update the debug display with current parameter values
             this.updateDebugMenuDisplay();
             
+            // Start real-time system status monitoring
+            this.startSystemStatusUpdates();
+            this.updateSystemStatus(); // Initial update
+            
             // Provide user feedback about entering debug mode
             this.app.ui.updateStatus('DEBUG MODE: Use ↑/↓ to navigate, ←/→ to adjust', 'info');
         } else {
@@ -59,6 +63,9 @@ export class DebugUIManager {
             debugMenu.classList.add('hidden');
             ui.classList.remove('hidden');
             controls.classList.remove('hidden');
+            
+            // Stop system status monitoring
+            this.stopSystemStatusUpdates();
             
             // Update normal UI to reflect any changes made in debug mode
             this.app.ui.updateDisplay();
@@ -153,6 +160,9 @@ export class DebugUIManager {
         
         // Update the display to show the new value using lightweight update
         this.updateSelectionOnly();
+        
+        // Update system status to reflect parameter change
+        this.updateSystemStatus();
         
         // Provide detailed feedback about the change
         const param = this.app.parameters.getParameter(paramKey);
@@ -703,5 +713,75 @@ export class DebugUIManager {
         });
         
         return stats;
+    }
+    
+    // Update the system status display in debug menu
+    updateSystemStatus() {
+        const statusElement = document.getElementById('debugSystemStatus');
+        if (!statusElement || !this.app.debugMenuVisible) return;
+        
+        const systemStatus = this.app.getSystemStatus();
+        const currentTime = new Date().toLocaleTimeString();
+        
+        let statusHTML = `<div style="margin-bottom: 6px;"><strong>🔧 System Performance [${currentTime}]</strong></div>`;
+        
+        // Core system metrics
+        statusHTML += `<div style="margin-bottom: 4px;">`;
+        statusHTML += `📊 Parameters: ${systemStatus.regularParameters} artistic + ${systemStatus.debugParameters} debug<br>`;
+        statusHTML += `⏱️ Frame Time: ${systemStatus.averageFrameTime} (Target: 16.67ms)<br>`;
+        statusHTML += `💾 Undo Stack: ${systemStatus.undoStackSize}/${50} steps`;
+        statusHTML += `</div>`;
+        
+        // Current operational state
+        statusHTML += `<div style="margin-bottom: 4px;"><strong>🎮 Active Systems:</strong><br>`;
+        statusHTML += `${systemStatus.debugModeActive ? '🧮' : '🎨'} ${systemStatus.debugModeActive ? 'Mathematical Mode' : 'Artistic Mode'}<br>`;
+        statusHTML += `${systemStatus.animationPaused ? '⏸️' : '▶️'} ${systemStatus.animationPaused ? 'Paused' : 'Animating'}<br>`;
+        statusHTML += `${systemStatus.audioReactive ? '🎵' : '🔇'} Audio: ${systemStatus.audioReactive ? 'Reactive' : 'Static'}`;
+        
+        // OSC hardware status if available
+        if (this.app.osc && this.app.osc.isActive()) {
+            const oscStatus = this.app.osc.getStatus();
+            statusHTML += `<br>🎛️ Hardware: ${oscStatus.connected ? 'Connected' : 'Connecting'}`;
+        }
+        statusHTML += `</div>`;
+        
+        // Current parameter info
+        const currentParam = this.getCurrentSelectedParameterKey();
+        if (currentParam) {
+            const param = this.app.parameters.getParameter(currentParam);
+            statusHTML += `<div style="margin-bottom: 4px;"><strong>🎯 Current Parameter:</strong><br>`;
+            statusHTML += `${param.name}: ${this.app.parameters.getValue(currentParam).toFixed(3)}`;
+            statusHTML += `</div>`;
+        }
+        
+        // Memory and performance warnings
+        if (systemStatus.undoStackSize > 40) {
+            statusHTML += `<div style="color: #FF9800;">⚠️ High memory usage</div>`;
+        }
+        
+        const frameTime = parseFloat(systemStatus.averageFrameTime);
+        if (frameTime > 20) {
+            statusHTML += `<div style="color: #FF5722;">⚠️ Performance impact detected</div>`;
+        }
+        
+        statusElement.innerHTML = statusHTML;
+    }
+    
+    // Start periodic system status updates
+    startSystemStatusUpdates() {
+        // Update every 2 seconds for real-time monitoring
+        this.systemStatusInterval = setInterval(() => {
+            if (this.app.debugMenuVisible) {
+                this.updateSystemStatus();
+            }
+        }, 2000);
+    }
+    
+    // Stop system status updates
+    stopSystemStatusUpdates() {
+        if (this.systemStatusInterval) {
+            clearInterval(this.systemStatusInterval);
+            this.systemStatusInterval = null;
+        }
     }
 }

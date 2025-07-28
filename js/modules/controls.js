@@ -172,6 +172,11 @@ export class ControlsManager {
                 this.app.audio.toggleMicrophone();
                 break;
                 
+            case 'KeyO':
+                e.preventDefault();
+                this.app.osc.toggleOSC();
+                break;
+                
             case 'Semicolon':  // THE DEBUG MODE TOGGLE
                 e.preventDefault();
                 this.toggleDebugMode();
@@ -362,7 +367,7 @@ export class ControlsManager {
         console.log('Debug Statistics:', {
             debugParameters: stats,
             systemStatus: systemStatus,
-            currentParameter: this.app.debugUI.getCurrentDebugParameterKey()
+            currentParameter: this.app.debugUI.getCurrentSelectedParameterKey()
         });
     }
     

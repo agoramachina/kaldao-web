@@ -114,6 +114,29 @@ export class DebugUIManager {
     adjustDebugParameter(delta) {
         if (this.allDebugKeys.length === 0) return;
         
+        // Set keyboard navigation flag to prevent mouse interference during value adjustment
+        this.keyboardNavigationActive = true;
+        
+        // Add CSS class to disable hover effects during keyboard value adjustment
+        const debugParamsList = document.getElementById('debugParametersList');
+        if (debugParamsList) {
+            debugParamsList.classList.add('keyboard-navigation');
+        }
+        
+        // Clear any existing timeout
+        if (this.keyboardNavigationTimeout) {
+            clearTimeout(this.keyboardNavigationTimeout);
+        }
+        
+        // Reset flag after a short delay to allow mouse interaction again
+        this.keyboardNavigationTimeout = setTimeout(() => {
+            this.keyboardNavigationActive = false;
+            // Remove CSS class to re-enable hover effects
+            if (debugParamsList) {
+                debugParamsList.classList.remove('keyboard-navigation');
+            }
+        }, 500); // Same timeout as navigation
+        
         // Save state for undo before making any changes
         // This is crucial because debug parameter changes can have dramatic effects
         this.app.saveStateForUndo();
@@ -131,8 +154,8 @@ export class DebugUIManager {
             this.parameterModificationCount++;
         }
         
-        // Update the display to show the new value
-        this.updateDebugMenuDisplay();
+        // Update the display to show the new value using lightweight update
+        this.updateSelectionOnly();
         
         // Provide detailed feedback about the change
         const param = this.app.parameters.getParameter(paramKey);
@@ -443,11 +466,33 @@ export class DebugUIManager {
 
         const currentKey = this.allDebugKeys[this.currentDebugParameterIndex];
         
-        // Remove current selection from all items and restore their original styling
+        // Update all parameter values in case any have changed
         const allParamLines = document.querySelectorAll('.debug-param-line');
         allParamLines.forEach(line => {
             const paramKey = line.getAttribute('data-param-key');
             const paramType = line.getAttribute('data-param-type');
+            
+            // Update the parameter value display
+            const param = this.app.parameters.getParameter(paramKey);
+            if (param) {
+                const valueSpan = line.querySelector('.param-value');
+                if (valueSpan) {
+                    // Determine appropriate precision for display based on parameter step size
+                    let displayValue;
+                    if (param.step >= 1.0) {
+                        displayValue = param.value.toFixed(0);
+                    } else if (param.step >= 0.1) {
+                        displayValue = param.value.toFixed(1);
+                    } else if (param.step >= 0.01) {
+                        displayValue = param.value.toFixed(2);
+                    } else if (param.step >= 0.001) {
+                        displayValue = param.value.toFixed(3);
+                    } else {
+                        displayValue = param.value.toFixed(4);
+                    }
+                    valueSpan.textContent = displayValue.padStart(8);
+                }
+            }
             
             line.classList.remove('debug-param-current');
             
@@ -500,10 +545,28 @@ export class DebugUIManager {
         currentParamInfo.innerHTML = infoHTML;
     }
 
-    // Get human-readable descriptions for debug parameters
-    // These help users understand what each mathematical parameter actually controls
+    // Get human-readable descriptions for both artistic and debug parameters
+    // These help users understand what each parameter actually controls
     getParameterDescriptions() {
         return {
+            // Artistic parameter descriptions
+            'fly_speed': 'Speed of forward movement through the fractal tunnel. Higher values create faster flight.',
+            'rotation_speed': 'Speed of overall rotation around the tunnel axis. Creates spinning motion effect.',
+            'plane_rotation_speed': 'Speed of pattern plane rotation. Controls how fast individual pattern layers spin.',
+            'zoom_level': 'Camera zoom factor. Higher values zoom in closer, lower values zoom out for wider view.',
+            'kaleidoscope_segments': 'Number of mirror segments in kaleidoscope effect. Must be even for proper symmetry.',
+            'truchet_radius': 'Size of truchet pattern circles. Larger values create bigger, more prominent circular patterns.',
+            'center_fill_radius': 'Size of the central filled circle. Creates a focal point in the center of the view.',
+            'layer_count': 'Number of pattern layers rendered in depth. More layers create richer, more complex visuals.',
+            'camera_tilt_x': 'Camera tilt on X-axis. Positive values tilt the view up, negative values tilt down.',
+            'camera_tilt_y': 'Camera tilt on Y-axis. Positive values tilt the view right, negative values tilt left.',
+            'camera_roll': 'Camera roll rotation. Creates a tilting horizon effect for dynamic composition.',
+            'path_stability': 'Stability of the camera path. Lower values create more curved, organic movement.',
+            'path_scale': 'Scale of path variations. Higher values create wider, more dramatic path curves.',
+            'contrast': 'Visual contrast between light and dark areas. Higher values create more dramatic lighting.',
+            'color_intensity': 'Intensity of colors in the palette. Higher values create more vibrant, saturated colors.',
+            'color_speed': 'Speed of color cycling through the palette. Higher values create faster color changes.',
+            
             // Layer system descriptions
             'layer_distance': 'Distance between rendered layers. Lower values create tighter, more dense layering.',
             'layer_fade_start': 'Distance at which layers begin fading. Higher values show more distant layers.',

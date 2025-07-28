@@ -101,7 +101,7 @@ export class ColorManager {
                         
                         <div style="display: flex; gap: 6px; margin-bottom: 10px;">
                             <button id="previewPrevPalette" style="flex: 1; padding: 6px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">← Prev</button>
-                            <span id="currentPaletteIndex" style="flex: 1; text-align: center; font-size: 12px; line-height: 28px;">Palette 1</span>
+                            <span id="currentPaletteIndex" style="flex: 1; text-align: center; font-size: 12px; line-height: 28px;">Black and White</span>
                             <button id="previewNextPalette" style="flex: 1; padding: 6px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Next →</button>
                         </div>
                         
@@ -351,7 +351,7 @@ export class ColorManager {
             const colorMode = this.app.parameters.getValue('color_mode');
             
             // Update palette index display
-            currentIndex.textContent = `Palette ${this.app.currentPaletteIndex + 1}`;
+            currentIndex.textContent = this.colorPalettes[this.app.currentPaletteIndex].name;
             
             if (colorMode < 0.5) {
                 // Mode 0: Black & White
@@ -405,8 +405,8 @@ export class ColorManager {
         
         if (paletteSelector) {
             // Populate palette options
-            paletteSelector.innerHTML = this.colorPalettes.map((_, index) => 
-                `<option value="${index}">${index === 0 ? 'Black & White' : `Color Palette ${index}`}</option>`
+            paletteSelector.innerHTML = this.colorPalettes.map((palette, index) => 
+                `<option value="${index}">${palette.name}</option>`
             ).join('');
             paletteSelector.value = this.app.currentPaletteIndex;
         }

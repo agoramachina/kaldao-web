@@ -14,6 +14,8 @@ export class AudioSystem {
         this.microphoneStream = null;
         this.microphoneSource = null;
         this.microphoneActive = false;
+        this.selectedMicrophoneId = null;
+        this.availableDevices = [];
     }
 
     init(app) {
@@ -168,22 +170,175 @@ export class AudioSystem {
         if (this.microphoneActive) {
             this.stopMicrophone();
         } else {
-            await this.startMicrophone();
+            // Show microphone selection popup
+            await this.showMicrophoneSelectionPopup();
         }
     }
 
-    async startMicrophone() {
+    async showMicrophoneSelectionPopup() {
+        // Get available devices first
+        const devices = await this.getAvailableDevices();
+        
+        if (devices.length === 0) {
+            this.app.ui.updateStatus('No microphones found', 'error');
+            return;
+        }
+
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'microphoneSelectionOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+        `;
+
+        // Create dialog box
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: #1a1a1a;
+            border: 2px solid #9C27B0;
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        `;
+
+        dialog.innerHTML = `
+            <h3 style="color: #9C27B0; margin-bottom: 15px; font-size: 16px;">🎤 Select Microphone</h3>
+            
+            <div style="margin-bottom: 15px; font-size: 12px; line-height: 1.4; color: #cccccc;">
+                Choose which microphone to use for audio reactivity.
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; color: #9C27B0; font-size: 13px;">Available Microphones:</label>
+                <select id="micPopupSelect" style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; color: #fff; border-radius: 4px; font-family: 'Courier New', monospace;">
+                    <option value="">Select microphone...</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="micPopupCancel" style="padding: 8px 16px; background: #666; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Cancel</button>
+                <button id="micPopupConnect" style="padding: 8px 16px; background: #9C27B0; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Connect</button>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Populate device list
+        const select = document.getElementById('micPopupSelect');
+        devices.forEach(device => {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label || `Microphone ${device.deviceId.substring(0, 8)}`;
+            select.appendChild(option);
+        });
+
+        // Set default selection if we have a previously selected device
+        if (this.selectedMicrophoneId) {
+            select.value = this.selectedMicrophoneId;
+        }
+
+        // Handle button clicks
+        const cancelButton = document.getElementById('micPopupCancel');
+        const connectButton = document.getElementById('micPopupConnect');
+        
+        if (cancelButton) {
+            cancelButton.onclick = () => {
+                document.body.removeChild(overlay);
+            };
+        }
+
+        if (connectButton) {
+            connectButton.onclick = async () => {
+                const selectedDeviceId = select.value;
+                if (!selectedDeviceId) {
+                    alert('Please select a microphone');
+                    return;
+                }
+
+                document.body.removeChild(overlay);
+                
+                // Set selected device and start
+                this.selectedMicrophoneId = selectedDeviceId;
+                await this.startMicrophone(selectedDeviceId);
+            };
+        }
+
+        // Handle Enter/Escape keys
+        dialog.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                if (connectButton) connectButton.click();
+            } else if (e.key === 'Escape') {
+                if (cancelButton) cancelButton.click();
+            }
+        });
+
+        // Focus the select
+        setTimeout(() => select.focus(), 100);
+    }
+
+    async getAvailableDevices() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            this.availableDevices = devices.filter(device => device.kind === 'audioinput');
+            return this.availableDevices;
+        } catch (error) {
+            console.error('Could not enumerate devices:', error);
+            return [];
+        }
+    }
+
+    async startMicrophone(deviceId = null) {
         try {
             this.app.ui.updateStatus('🎤 Requesting microphone access...', 'info');
             
+            // Use specified device or the selected one
+            const targetDeviceId = deviceId || this.selectedMicrophoneId;
+            
+            // Create audio constraints
+            const audioConstraints = {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false
+            };
+            
+            // Add device ID if specified
+            if (targetDeviceId) {
+                audioConstraints.deviceId = { exact: targetDeviceId };
+                console.log('🎤 Requesting specific device:', targetDeviceId);
+            } else {
+                console.log('🎤 Requesting default microphone');
+            }
+            
             // Request microphone access
             this.microphoneStream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: false,
-                    noiseSuppression: false,
-                    autoGainControl: false
-                } 
+                audio: audioConstraints
             });
+            
+            // Log details about the audio stream we got
+            console.log('🎤 Audio stream details:');
+            const audioTracks = this.microphoneStream.getAudioTracks();
+            if (audioTracks.length > 0) {
+                const track = audioTracks[0];
+                console.log('  - Track label:', track.label || 'Unknown device');
+                console.log('  - Track enabled:', track.enabled);
+                console.log('  - Track ready state:', track.readyState);
+                console.log('  - Track settings:', track.getSettings());
+                console.log('  - Track constraints:', track.getConstraints());
+            }
             
             // Resume audio context if needed
             if (this.audioContext.state === 'suspended') {
@@ -202,6 +357,28 @@ export class AudioSystem {
             
             this.microphoneActive = true;
             this.audioReactive = true;
+            
+            // Debug: Log audio context and analyser settings (controlled by debug settings)
+            if (this.app && this.app.debugUI && this.app.debugUI.shouldLog('microphoneSetup')) {
+                console.log('🎤 Microphone setup complete:');
+                console.log('  - Audio context state:', this.audioContext.state);
+                console.log('  - Audio context sample rate:', this.audioContext.sampleRate);
+                console.log('  - Analyser FFT size:', this.analyser.fftSize);
+                console.log('  - Analyser frequency bin count:', this.analyser.frequencyBinCount);
+                console.log('  - Analyser smoothing:', this.analyser.smoothingTimeConstant);
+                console.log('  - Audio data array length:', this.audioData.length);
+                
+                // Test immediate data capture
+                setTimeout(() => {
+                    this.analyser.getByteFrequencyData(this.audioData);
+                    const maxValue = Math.max(...this.audioData);
+                    const avgValue = this.audioData.reduce((a, b) => a + b, 0) / this.audioData.length;
+                    console.log(`🎤 Initial audio check: Max=${maxValue}, Avg=${avgValue.toFixed(2)}`);
+                    if (maxValue === 0) {
+                        console.log('⚠️ No audio signal detected - try speaking/making noise');
+                    }
+                }, 1000);
+            }
             
             this.app.ui.updateStatus('🎤 Microphone active with reactivity!', 'success');
             this.app.ui.updateMenuDisplay();
@@ -275,7 +452,54 @@ export class AudioSystem {
         const treble = getAverageVolume.call(this, trebleRange);
         const overall = (bass + mid + treble) / 3.0;
         
+        // Debug logging when microphone is active (controlled by debug settings)
+        if (this.microphoneActive && this.app && this.app.debugUI) {
+            // Log every second instead of every 2 seconds for better feedback
+            if (Math.floor(Date.now() / 1000) % 1 === 0) {
+                const maxValue = Math.max(...this.audioData);
+                const avgValue = this.audioData.reduce((a, b) => a + b, 0) / this.audioData.length;
+                
+                if (this.app.debugUI.shouldLog('audioLevels')) {
+                    console.log(`🎤 LIVE: Bass=${bass.toFixed(3)}, Mid=${mid.toFixed(3)}, Treble=${treble.toFixed(3)}, Overall=${overall.toFixed(3)}`);
+                }
+                
+                if (this.app.debugUI.shouldLog('audioRawData')) {
+                    console.log(`🎤 RAW: Max=${maxValue}/255 (${(maxValue/255*100).toFixed(1)}%), Avg=${avgValue.toFixed(1)}`);
+                }
+                
+                // Show which parameters would be affected
+                if (this.app.debugUI.shouldLog('audioEffects')) {
+                    if (overall > 0.01) {
+                        console.log(`🎨 Would affect: center_fill_radius×${(1.0 + bass * 0.8 * 1.5).toFixed(2)}, rotation_speed×${(1.0 + mid * 0.4).toFixed(2)}`);
+                    } else if (maxValue > 0) {
+                        console.log('⚠️ Audio detected but levels very low - try louder input');
+                    } else {
+                        console.log('❌ No audio signal - check microphone settings/volume');
+                    }
+                }
+            }
+        }
+        
         return { bass, mid, treble, overall };
+    }
+
+    // Get current volume level for UI display (0-1 range)
+    getCurrentVolumeLevel() {
+        if (!this.microphoneActive || !this.analyser || !this.audioData) {
+            return 0;
+        }
+        
+        // Get fresh audio data
+        this.analyser.getByteFrequencyData(this.audioData);
+        
+        // Calculate overall volume level
+        const maxValue = Math.max(...this.audioData);
+        const avgValue = this.audioData.reduce((a, b) => a + b, 0) / this.audioData.length;
+        
+        // Use a combination of max and average for more responsive display
+        const volumeLevel = (maxValue * 0.7 + avgValue * 0.3) / 255.0;
+        
+        return Math.min(1.0, volumeLevel);
     }
 
     applyReactivity(parameters) {

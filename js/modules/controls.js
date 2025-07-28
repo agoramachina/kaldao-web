@@ -38,6 +38,23 @@ export class ControlsManager {
 
     handleKeydown(e) {
         try {
+            // Check if user is typing in an input field - if so, ignore most hotkeys
+            const activeElement = document.activeElement;
+            const isTypingInInput = activeElement && (
+                activeElement.tagName === 'INPUT' || 
+                activeElement.tagName === 'TEXTAREA' ||
+                activeElement.contentEditable === 'true'
+            );
+            
+            // Allow certain keys even when typing (Escape, Ctrl+Z, etc.)
+            const alwaysAllowedKeys = ['Escape', 'KeyZ', 'KeyY'];
+            const isCtrlKey = e.ctrlKey || e.metaKey;
+            
+            if (isTypingInInput && !alwaysAllowedKeys.includes(e.code) && !isCtrlKey) {
+                // User is typing in input field - don't intercept the key
+                return;
+            }
+            
             // Always reset the UI fade timer on any keypress
             // This ensures the interface remains visible while actively controlling parameters
             this.app.ui.resetControlsFadeTimer();
@@ -244,9 +261,17 @@ export class ControlsManager {
                 
             case 'Period':
                 e.preventDefault();
-                // CONTROLLED RANDOMIZATION: Only randomize mathematically safe debug parameters
-                // This prevents breaking the visualization while still allowing exploration
-                this.app.debugUI.randomizeDebugParameters();
+                // Save state for undo before randomizing
+                this.app.saveStateForUndo();
+                
+                // Randomize artistic parameters (same as normal mode)
+                this.app.parameters.randomizeParameters();
+                
+                // Update displays
+                this.app.ui.updateDisplay();
+                this.app.debugUI.updateDebugMenuDisplay();
+                
+                this.app.ui.updateStatus('🎲 Randomized artistic parameters', 'success');
                 break;
                 
             case 'KeyE':  // EXPORT DEBUG STATE
@@ -256,10 +281,10 @@ export class ControlsManager {
                 this.app.debugUI.exportDebugState();
                 break;
                 
-            case 'KeyD':  // DEBUG STATISTICS
+            case 'KeyD':  // DEBUG LOGGING CONTROLS
                 e.preventDefault();
-                // Display comprehensive information about current debug state
-                this.showDebugStatistics();
+                // Show popup to control what gets logged to console
+                this.app.debugUI.showDebugLoggingControls();
                 break;
                 
             case 'KeyH':  // HELP IN DEBUG MODE
@@ -267,6 +292,7 @@ export class ControlsManager {
                 // Show debug-specific help information
                 this.showDebugHelp();
                 break;
+                
                 
             case 'Escape':
                 e.preventDefault();
@@ -292,6 +318,26 @@ export class ControlsManager {
                     // Redo works in debug mode
                     this.app.redo();
                 }
+                break;
+                
+            case 'KeyM':  // MICROPHONE TOGGLE IN DEBUG MODE
+                e.preventDefault();
+                // Allow microphone control even in debug mode for audio-reactive mathematical exploration
+                this.app.audio.toggleMicrophone();
+                break;
+                
+            case 'Comma':  // RANDOMIZE DEBUG PARAMETERS ONLY
+                e.preventDefault();
+                // Save state for undo before randomizing debug parameters
+                this.app.saveStateForUndo();
+                
+                // Randomize debug parameters (safe ones only)
+                this.app.debugUI.randomizeDebugParameters();
+                
+                // Update debug display
+                this.app.debugUI.updateDebugMenuDisplay();
+                
+                this.app.ui.updateStatus('🎲 Randomized mathematical parameters only', 'success');
                 break;
                 
             // IMPORTANT: Most other keys are intentionally ignored in debug mode

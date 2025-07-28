@@ -10,6 +10,18 @@ export class DebugUIManager {
         this.parameterModificationCount = 0; // Track how many debug params have been modified
         this.keyboardNavigationActive = false; // Track if we're currently navigating with keyboard
         this.keyboardNavigationTimeout = null; // Timeout to reset keyboard navigation flag
+        
+        // Debug logging settings - control what gets logged to console
+        this.debugLogging = {
+            audioLevels: false,      // 🎤 Audio level analysis
+            audioRawData: false,     // 🎤 Raw audio data values
+            audioEffects: false,     // 🎨 Which parameters audio affects
+            performanceFrames: false, // 🎬 Frame performance every 60 frames
+            microphoneSetup: true,   // 🎤 Microphone initialization info
+            oscMessages: false,      // 🎛️ OSC message handling
+            parameterChanges: false, // 📊 Parameter value changes
+            systemStatus: false      // 🔧 System diagnostics
+        };
     }
 
     init(app) {
@@ -56,6 +68,9 @@ export class DebugUIManager {
             this.startSystemStatusUpdates();
             this.updateSystemStatus(); // Initial update
             
+            // Set up OSC listener controls (with small delay to ensure DOM is ready)
+            setTimeout(() => this.setupOSCListenerControls(), 100);
+            
             // Provide user feedback about entering debug mode
             this.app.ui.updateStatus('DEBUG MODE: Use ↑/↓ to navigate, ←/→ to adjust', 'info');
         } else {
@@ -66,6 +81,10 @@ export class DebugUIManager {
             
             // Stop system status monitoring
             this.stopSystemStatusUpdates();
+            
+            // Clean up OSC listener controls
+            this.cleanupOSCListenerControls();
+            
             
             // Update normal UI to reflect any changes made in debug mode
             this.app.ui.updateDisplay();
@@ -727,7 +746,6 @@ export class DebugUIManager {
         
         // Core system metrics
         statusHTML += `<div style="margin-bottom: 4px;">`;
-        statusHTML += `📊 Parameters: ${systemStatus.regularParameters} artistic + ${systemStatus.debugParameters} debug<br>`;
         statusHTML += `⏱️ Frame Time: ${systemStatus.averageFrameTime} (${systemStatus.estimatedFPS} FPS)<br>`;
         statusHTML += `🎬 Total Frames: ${systemStatus.totalFramesRendered.toLocaleString()}<br>`;
         statusHTML += `💾 Undo Stack: ${systemStatus.undoStackSize}/${50} steps`;
@@ -735,8 +753,8 @@ export class DebugUIManager {
         
         // Current operational state
         statusHTML += `<div style="margin-bottom: 4px;"><strong>🎮 Active Systems:</strong><br>`;
-        statusHTML += `${systemStatus.debugModeActive ? '🧮' : '🎨'} ${systemStatus.debugModeActive ? 'Mathematical Mode' : 'Artistic Mode'}<br>`;
-        statusHTML += `${systemStatus.animationPaused ? '⏸️' : '▶️'} ${systemStatus.animationPaused ? 'Paused' : 'Animating'}<br>`;
+        statusHTML += `${systemStatus.debugModeActive ? '🧮' : '🎨'} ${systemStatus.debugModeActive ? 'Debug Mode' : 'Artistic Mode'}<br>`;
+        statusHTML += `${systemStatus.animationPaused ? '⏸️' : '▶️'} ${systemStatus.animationPaused ? 'Paused' : 'Animation'}<br>`;
         statusHTML += `${systemStatus.audioReactive ? '🎵' : '🔇'} Audio: ${systemStatus.audioReactive ? 'Reactive' : 'Static'}`;
         
         // OSC hardware status if available
@@ -745,15 +763,6 @@ export class DebugUIManager {
             statusHTML += `<br>🎛️ Hardware: ${oscStatus.connected ? 'Connected' : 'Connecting'}`;
         }
         statusHTML += `</div>`;
-        
-        // Current parameter info
-        const currentParam = this.getCurrentSelectedParameterKey();
-        if (currentParam) {
-            const param = this.app.parameters.getParameter(currentParam);
-            statusHTML += `<div style="margin-bottom: 4px;"><strong>🎯 Current Parameter:</strong><br>`;
-            statusHTML += `${param.name}: ${this.app.parameters.getValue(currentParam).toFixed(3)}`;
-            statusHTML += `</div>`;
-        }
         
         // Memory and performance warnings
         if (systemStatus.undoStackSize > 40) {
@@ -784,5 +793,352 @@ export class DebugUIManager {
             clearInterval(this.systemStatusInterval);
             this.systemStatusInterval = null;
         }
+    }
+    
+    // Set up OSC listener controls in debug menu
+    setupOSCListenerControls() {
+        const hostInput = document.getElementById('debugOSCHost');
+        const portInput = document.getElementById('debugOSCPort');
+        const connectButton = document.getElementById('debugOSCConnect');
+        const statusDiv = document.getElementById('debugOSCStatus');
+        
+        if (!hostInput || !portInput || !connectButton || !statusDiv) {
+            console.warn('OSC Listener controls not found in debug menu');
+            return;
+        }
+        
+        console.log('Setting up OSC Listener controls');
+        
+        // Initialize with current OSC settings
+        const currentHost = this.app.osc.extractHost(this.app.osc.wsUrl);
+        const currentPort = this.app.osc.extractPort(this.app.osc.wsUrl);
+        hostInput.value = currentHost;
+        portInput.value = currentPort;
+        
+        // Update initial status
+        this.updateOSCListenerStatus();
+        
+        // Handle connect/disconnect button
+        connectButton.onclick = async () => {
+            console.log('OSC Connect button clicked');
+            
+            if (this.app.osc.isActive()) {
+                // Disconnect
+                console.log('Disconnecting OSC...');
+                this.app.osc.disconnect();
+                this.updateOSCListenerStatus();
+            } else {
+                // Connect with current settings
+                const host = hostInput.value.trim();
+                const port = parseInt(portInput.value);
+                
+                console.log('Attempting OSC connection:', { host, port });
+                
+                if (!host || !port || port < 1024 || port > 65535) {
+                    console.log('Invalid OSC settings:', { host, port });
+                    this.app.ui.updateStatus('Invalid OSC host or port settings', 'error');
+                    return;
+                }
+                
+                const url = `ws://${host}:${port}`;
+                console.log('Connecting to OSC URL:', url);
+                
+                try {
+                    await this.app.osc.connect(url);
+                    console.log('OSC connection attempt completed');
+                } catch (error) {
+                    console.error('OSC connection error:', error);
+                    this.app.ui.updateStatus(`OSC connection failed: ${error.message}`, 'error');
+                }
+                
+                this.updateOSCListenerStatus();
+            }
+        };
+        
+        // Handle input changes
+        const updateSettings = () => {
+            const host = hostInput.value.trim();
+            const port = parseInt(portInput.value);
+            
+            if (host && port && port >= 1024 && port <= 65535) {
+                const url = `ws://${host}:${port}`;
+                this.app.osc.setWebSocketURL(url);
+            }
+        };
+        
+        hostInput.addEventListener('input', updateSettings);
+        portInput.addEventListener('input', updateSettings);
+        
+        // Start periodic status updates (faster refresh for better responsiveness)
+        this.oscListenerStatusInterval = setInterval(() => {
+            if (this.app.debugMenuVisible) {
+                this.updateOSCListenerStatus();
+                this.updateMicrophoneStatus();
+            }
+        }, 50);
+        
+        // Set up microphone selection controls
+        this.setupMicrophoneControls();
+    }
+    
+    // Update OSC listener status display
+    updateOSCListenerStatus() {
+        const connectButton = document.getElementById('debugOSCConnect');
+        const statusDiv = document.getElementById('debugOSCStatus');
+        
+        if (!connectButton || !statusDiv) return;
+        
+        const oscStatus = this.app.osc.getStatus();
+        
+        if (oscStatus.active && oscStatus.connected) {
+            connectButton.textContent = 'Disconnect';
+            connectButton.style.background = '#F44336';
+            statusDiv.innerHTML = `<span style="color: #4CAF50;">● Connected</span><br>${oscStatus.url}<br>${oscStatus.mappings} parameters mapped`;
+        } else if (oscStatus.active && !oscStatus.connected) {
+            connectButton.textContent = 'Cancel';
+            connectButton.style.background = '#FF9800';
+            const attempts = oscStatus.reconnectAttempts > 0 ? ` (${oscStatus.reconnectAttempts}/5)` : '';
+            statusDiv.innerHTML = `<span style="color: #FF9800;">● Connecting...</span>${attempts}<br>${oscStatus.url}`;
+        } else {
+            connectButton.textContent = 'Connect';
+            connectButton.style.background = '#4CAF50';
+            statusDiv.innerHTML = '<span style="color: #888;">○ Not connected</span><br>Arduino + Python bridge required';
+        }
+    }
+    
+    // Clean up OSC listener controls
+    cleanupOSCListenerControls() {
+        if (this.oscListenerStatusInterval) {
+            clearInterval(this.oscListenerStatusInterval);
+            this.oscListenerStatusInterval = null;
+        }
+    }
+    
+    // Set up microphone selection controls
+    async setupMicrophoneControls() {
+        const micSelect = document.getElementById('microphoneSelect');
+        const refreshButton = document.getElementById('microphoneRefresh');
+        const connectButton = document.getElementById('microphoneConnect');
+        
+        if (!micSelect || !refreshButton || !connectButton) {
+            console.warn('Microphone controls not found in debug menu');
+            return;
+        }
+        
+        // Refresh devices list
+        const refreshDevices = async () => {
+            const devices = await this.app.audio.getAvailableDevices();
+            
+            // Clear existing options
+            micSelect.innerHTML = '<option value="">Select microphone...</option>';
+            
+            // Add device options
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || `Microphone ${device.deviceId.substring(0, 8)}`;
+                micSelect.appendChild(option);
+            });
+            
+            console.log(`🎤 Found ${devices.length} audio input devices`);
+        };
+        
+        // Set up event handlers
+        refreshButton.onclick = refreshDevices;
+        
+        connectButton.onclick = async () => {
+            const selectedDeviceId = micSelect.value;
+            if (!selectedDeviceId) {
+                this.app.ui.updateStatus('Please select a microphone first', 'error');
+                return;
+            }
+            
+            // Initialize audio context if needed
+            if (!this.app.audio.audioContext) {
+                await this.app.audio.initAudioContext();
+            }
+            
+            // Stop current microphone if active
+            if (this.app.audio.microphoneActive) {
+                this.app.audio.stopMicrophone();
+            }
+            
+            // Set selected device and start
+            this.app.audio.selectedMicrophoneId = selectedDeviceId;
+            await this.app.audio.startMicrophone(selectedDeviceId);
+        };
+        
+        // Initial device refresh
+        await refreshDevices();
+        
+        console.log('Microphone selection controls initialized');
+    }
+    
+    // Update microphone status display
+    updateMicrophoneStatus() {
+        const statusDiv = document.getElementById('microphoneStatus');
+        const volumeBar = document.getElementById('microphoneVolumeBar');
+        const volumeLevel = document.getElementById('microphoneVolumeLevel');
+        const volumeText = document.getElementById('microphoneVolumeText');
+        
+        if (!statusDiv) return;
+        
+        if (this.app.audio.microphoneActive) {
+            const deviceInfo = this.app.audio.availableDevices.find(
+                device => device.deviceId === this.app.audio.selectedMicrophoneId
+            );
+            const deviceName = deviceInfo?.label || 'Unknown device';
+            statusDiv.innerHTML = `<span style="color: #9C27B0;">● Active: ${deviceName}</span>`;
+            
+            // Show and update volume bar
+            if (volumeBar) {
+                volumeBar.style.display = 'block';
+                
+                // Get current volume level (0-1)
+                const currentVolume = this.app.audio.getCurrentVolumeLevel();
+                const volumePercent = Math.round(currentVolume * 100);
+                
+                if (volumeLevel) {
+                    volumeLevel.style.width = `${volumePercent}%`;
+                }
+                
+                if (volumeText) {
+                    volumeText.textContent = `${volumePercent}%`;
+                }
+            }
+        } else {
+            statusDiv.innerHTML = '<span style="color: #888;">○ Not connected</span>';
+            
+            // Hide volume bar when not connected
+            if (volumeBar) {
+                volumeBar.style.display = 'none';
+            }
+        }
+    }
+    
+    // Show debug logging control popup
+    showDebugLoggingControls() {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'debugLoggingOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+        `;
+
+        // Create dialog box
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: #1a1a1a;
+            border: 2px solid #2196F3;
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        `;
+
+        const loggingOptions = [
+            { key: 'audioLevels', label: '🎤 Audio Levels', desc: 'Real-time bass/mid/treble analysis' },
+            { key: 'audioRawData', label: '🎤 Audio Raw Data', desc: 'Raw microphone data values' },
+            { key: 'audioEffects', label: '🎨 Audio Effects', desc: 'Which parameters audio modifies' },
+            { key: 'performanceFrames', label: '🎬 Performance Frames', desc: 'Frame timing every 60 frames' },
+            { key: 'microphoneSetup', label: '🎤 Microphone Setup', desc: 'Device initialization info' },
+            { key: 'oscMessages', label: '🎛️ OSC Messages', desc: 'Hardware control messages' },
+            { key: 'parameterChanges', label: '📊 Parameter Changes', desc: 'When parameters are modified' },
+            { key: 'systemStatus', label: '🔧 System Status', desc: 'Internal system diagnostics' }
+        ];
+
+        let checkboxHTML = '';
+        loggingOptions.forEach(option => {
+            const checked = this.debugLogging[option.key] ? 'checked' : '';
+            checkboxHTML += `
+                <div style="margin-bottom: 12px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="debug_${option.key}" ${checked} 
+                               style="margin-right: 10px; transform: scale(1.2);">
+                        <div>
+                            <div style="color: #2196F3; font-weight: bold; font-size: 13px;">${option.label}</div>
+                            <div style="color: #cccccc; font-size: 11px; margin-top: 2px;">${option.desc}</div>
+                        </div>
+                    </label>
+                </div>
+            `;
+        });
+
+        dialog.innerHTML = `
+            <h3 style="color: #2196F3; margin-bottom: 15px; font-size: 16px;">🔧 Debug Console Logging</h3>
+            
+            <div style="margin-bottom: 15px; font-size: 12px; line-height: 1.4; color: #cccccc;">
+                Choose which debug information to show in the browser console.
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                ${checkboxHTML}
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="debugLoggingClear" style="padding: 8px 16px; background: #FF5722; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Clear Console</button>
+                <button id="debugLoggingClose" style="padding: 8px 16px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace;">Close</button>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // Set up event handlers for checkboxes
+        loggingOptions.forEach(option => {
+            const checkbox = document.getElementById(`debug_${option.key}`);
+            if (checkbox) {
+                checkbox.onchange = () => {
+                    this.debugLogging[option.key] = checkbox.checked;
+                    console.log(`🔧 Debug logging ${option.label}: ${checkbox.checked ? 'ON' : 'OFF'}`);
+                };
+            }
+        });
+
+        // Handle buttons
+        const clearButton = document.getElementById('debugLoggingClear');
+        const closeButton = document.getElementById('debugLoggingClose');
+        
+        if (clearButton) {
+            clearButton.onclick = () => {
+                console.clear();
+                console.log('🔧 Console cleared');
+            };
+        }
+
+        if (closeButton) {
+            closeButton.onclick = () => {
+                document.body.removeChild(overlay);
+            };
+        }
+
+        // Handle Escape key
+        dialog.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (closeButton) closeButton.click();
+            }
+        });
+
+        // Focus the dialog
+        setTimeout(() => dialog.focus(), 100);
+    }
+    
+    // Helper method to check if a specific debug type should be logged
+    shouldLog(type) {
+        return this.debugLogging[type] || false;
     }
 }

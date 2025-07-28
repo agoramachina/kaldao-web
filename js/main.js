@@ -237,9 +237,16 @@ class KaldaoApp {
     // This is the heart of the application - the continuous cycle that updates mathematics and renders visuals
     // The rendering loop must handle both artistic expression and mathematical exploration seamlessly
     startRenderLoop() {
-        const render = () => {
+        let lastFrameTimestamp = performance.now();
+        
+        const render = (currentTimestamp) => {
             try {
                 const frameStartTime = performance.now();
+                
+                // Calculate actual time between frames (this is true FPS measurement)
+                const actualFrameTime = currentTimestamp - lastFrameTimestamp;
+                lastFrameTimestamp = currentTimestamp;
+                
                 const deltaTime = 1.0 / 60.0; // Target 60 FPS for smooth mathematical animation
                 
                 // MATHEMATICAL STATE UPDATES
@@ -271,8 +278,8 @@ class KaldaoApp {
                 // PERFORMANCE TRACKING
                 // Monitor performance to help users understand the computational cost of their mathematical choices
                 const frameEndTime = performance.now();
-                const frameTime = frameEndTime - frameStartTime;
-                this.updatePerformanceMetrics(frameTime);
+                const jsExecutionTime = frameEndTime - frameStartTime;
+                this.updatePerformanceMetrics(jsExecutionTime, actualFrameTime);
                 
                 // Continue the rendering loop
                 requestAnimationFrame(render);
@@ -294,14 +301,32 @@ class KaldaoApp {
     
     // PERFORMANCE METRICS TRACKING
     // This helps users understand the computational complexity of their mathematical explorations
-    updatePerformanceMetrics(frameTime) {
+    updatePerformanceMetrics(jsExecutionTime, actualFrameTime = null) {
         this.performanceMetrics.frameCount++;
-        this.performanceMetrics.lastFrameTime = frameTime;
+        this.performanceMetrics.lastFrameTime = jsExecutionTime;
+        
+        // Use actual frame time if provided, otherwise fall back to JS execution time
+        const frameTimeForFPS = actualFrameTime || jsExecutionTime;
+        
+        // Debug performance measurements with more detail (controlled by debug settings)
+        if (this.performanceMetrics.frameCount % 60 === 0 && this.debugUI && this.debugUI.shouldLog('performanceFrames')) {
+            if (actualFrameTime) {
+                const instantFPS = Math.round(1000 / actualFrameTime);
+                const avgFPS = Math.round(1000 / this.performanceMetrics.averageFrameTime);
+                console.log(`🎬 Frame #${this.performanceMetrics.frameCount}:`);
+                console.log(`   📊 JS Time: ${jsExecutionTime.toFixed(3)}ms`);
+                console.log(`   ⏱️  Actual Frame Time: ${actualFrameTime.toFixed(3)}ms (${instantFPS} FPS instant)`);
+                console.log(`   📈 Rolling Average: ${this.performanceMetrics.averageFrameTime.toFixed(3)}ms (${avgFPS} FPS avg)`);
+                console.log(`   🎯 Frame Time Breakdown: JS(${jsExecutionTime.toFixed(1)}ms) + GPU+VSync(${(actualFrameTime-jsExecutionTime).toFixed(1)}ms)`);
+            } else {
+                console.log(`Frame #${this.performanceMetrics.frameCount}: frameTime=${jsExecutionTime.toFixed(3)}ms, avgFrameTime=${this.performanceMetrics.averageFrameTime.toFixed(3)}ms, estimatedFPS=${Math.round(1000 / this.performanceMetrics.averageFrameTime)}`);
+            }
+        }
         
         // Calculate rolling average for smooth performance indicators
         const alpha = 0.1; // Smoothing factor
         this.performanceMetrics.averageFrameTime = 
-            alpha * frameTime + (1 - alpha) * this.performanceMetrics.averageFrameTime;
+            alpha * frameTimeForFPS + (1 - alpha) * this.performanceMetrics.averageFrameTime;
     }
     
     // ENHANCED STATE MANAGEMENT SYSTEM

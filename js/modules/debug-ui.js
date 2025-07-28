@@ -728,7 +728,8 @@ export class DebugUIManager {
         // Core system metrics
         statusHTML += `<div style="margin-bottom: 4px;">`;
         statusHTML += `📊 Parameters: ${systemStatus.regularParameters} artistic + ${systemStatus.debugParameters} debug<br>`;
-        statusHTML += `⏱️ Frame Time: ${systemStatus.averageFrameTime} (Target: 16.67ms)<br>`;
+        statusHTML += `⏱️ Frame Time: ${systemStatus.averageFrameTime} (${systemStatus.estimatedFPS} FPS)<br>`;
+        statusHTML += `🎬 Total Frames: ${systemStatus.totalFramesRendered.toLocaleString()}<br>`;
         statusHTML += `💾 Undo Stack: ${systemStatus.undoStackSize}/${50} steps`;
         statusHTML += `</div>`;
         

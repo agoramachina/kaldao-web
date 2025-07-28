@@ -16,6 +16,44 @@ export class AudioSystem {
         this.microphoneActive = false;
         this.selectedMicrophoneId = null;
         this.availableDevices = [];
+        
+        // Advanced audio analysis
+        this.beatDetection = {
+            enabled: false,
+            threshold: 1.3,           // Beat detection threshold multiplier
+            minTimeBetweenBeats: 300, // Minimum ms between beats
+            lastBeatTime: 0,
+            bassHistory: [],          // Rolling history for beat detection
+            historySize: 10
+        };
+        
+        // Enhanced frequency analysis (10-band equalizer style)
+        this.frequencyBands = {
+            // Sub-bass: 20-60Hz
+            subBass: { start: 0, end: 8, value: 0 },
+            // Bass: 60-250Hz  
+            bass: { start: 8, end: 32, value: 0 },
+            // Low-mid: 250-500Hz
+            lowMid: { start: 32, end: 64, value: 0 },
+            // Mid: 500-2kHz
+            mid: { start: 64, end: 128, value: 0 },
+            // High-mid: 2-4kHz
+            highMid: { start: 128, end: 170, value: 0 },
+            // Presence: 4-6kHz
+            presence: { start: 170, end: 200, value: 0 },
+            // Brilliance: 6-8kHz
+            brilliance: { start: 200, end: 225, value: 0 },
+            // Air: 8-12kHz
+            air: { start: 225, end: 256, value: 0 },
+            // Ultra: 12-16kHz (if available)
+            ultra: { start: 256, end: 340, value: 0 },
+            // Super: 16-20kHz+ (if available)
+            super: { start: 340, end: 512, value: 0 }
+        };
+        
+        // Audio-to-parameter mapping system
+        this.parameterMappings = {};
+        this.advancedMenuVisible = false;
     }
 
     init(app) {
@@ -429,28 +467,38 @@ export class AudioSystem {
 
     analyzeAudio() {
         if (!this.analyser || !this.audioData || !this.audioReactive || (!this.audioPlaying && !this.microphoneActive)) {
-            return { bass: 0, mid: 0, treble: 0, overall: 0 };
+            return { 
+                bass: 0, mid: 0, treble: 0, overall: 0, 
+                beat: false, 
+                frequencyBands: this.frequencyBands
+            };
         }
         
         this.analyser.getByteFrequencyData(this.audioData);
         
-        // Frequency ranges (approximate for 44.1kHz sample rate)
-        const bassRange = { start: 0, end: 32 };      // ~20-250Hz
-        const midRange = { start: 32, end: 128 };     // ~250-2000Hz  
-        const trebleRange = { start: 128, end: 256 }; // ~2000-8000Hz
-        
-        function getAverageVolume(range) {
+        // Enhanced frequency analysis - update all bands
+        for (const [bandName, band] of Object.entries(this.frequencyBands)) {
             let sum = 0;
-            for (let i = range.start; i < range.end && i < this.audioData.length; i++) {
+            const binCount = Math.min(band.end, this.audioData.length) - band.start;
+            
+            for (let i = band.start; i < band.end && i < this.audioData.length; i++) {
                 sum += this.audioData[i];
             }
-            return sum / (range.end - range.start) / 255.0;
+            
+            band.value = binCount > 0 ? (sum / binCount) / 255.0 : 0;
         }
         
-        const bass = getAverageVolume.call(this, bassRange);
-        const mid = getAverageVolume.call(this, midRange);
-        const treble = getAverageVolume.call(this, trebleRange);
+        // Legacy 3-band analysis for backward compatibility
+        const bass = this.frequencyBands.bass.value;
+        const mid = this.frequencyBands.mid.value;
+        const treble = (this.frequencyBands.highMid.value + this.frequencyBands.presence.value) / 2;
         const overall = (bass + mid + treble) / 3.0;
+        
+        // Beat detection algorithm
+        let beatDetected = false;
+        if (this.beatDetection.enabled) {
+            beatDetected = this.detectBeat(bass);
+        }
         
         // Debug logging when microphone is active (controlled by debug settings)
         if (this.microphoneActive && this.app && this.app.debugUI) {
@@ -480,7 +528,43 @@ export class AudioSystem {
             }
         }
         
-        return { bass, mid, treble, overall };
+        return { 
+            bass, mid, treble, overall, 
+            beat: beatDetected,
+            frequencyBands: this.frequencyBands
+        };
+    }
+    
+    // Beat detection algorithm based on bass energy variation
+    detectBeat(currentBass) {
+        const now = Date.now();
+        
+        // Add current bass to history
+        this.beatDetection.bassHistory.push(currentBass);
+        
+        // Keep history at specified size
+        if (this.beatDetection.bassHistory.length > this.beatDetection.historySize) {
+            this.beatDetection.bassHistory.shift();
+        }
+        
+        // Need enough history for beat detection
+        if (this.beatDetection.bassHistory.length < this.beatDetection.historySize) {
+            return false;
+        }
+        
+        // Calculate average bass energy over history
+        const averageBass = this.beatDetection.bassHistory.reduce((a, b) => a + b, 0) / this.beatDetection.bassHistory.length;
+        
+        // Check if current bass exceeds threshold and enough time has passed
+        const isAboveThreshold = currentBass > (averageBass * this.beatDetection.threshold);
+        const enoughTimePassed = (now - this.beatDetection.lastBeatTime) > this.beatDetection.minTimeBetweenBeats;
+        
+        if (isAboveThreshold && enoughTimePassed) {
+            this.beatDetection.lastBeatTime = now;
+            return true;
+        }
+        
+        return false;
     }
 
     // Get current volume level for UI display (0-1 range)
@@ -511,44 +595,561 @@ export class AudioSystem {
         
         const audioLevels = this.analyzeAudio();
         
-        // Create dynamic multipliers based on audio - matching old implementation exactly
-        const bassMultiplier = 1.0 + (audioLevels.bass * 0.8);      // 1.0 to 1.8x
-        const midMultiplier = 1.0 + (audioLevels.mid * 0.4);        // 1.0 to 1.4x
-        const trebleMultiplier = 1.0 + (audioLevels.treble * 0.3);  // 1.0 to 1.3x
-        const overallMultiplier = 1.0 + (audioLevels.overall * 0.5); // 1.0 to 1.5x
+        // Apply custom parameter mappings if any exist
+        const hasCustomMappings = Object.keys(this.parameterMappings).length > 0;
         
-        // Bass effects - make the center circle really pulse!
-        parameters.setAudioModifier('center_fill_radius', parameters.getBaseValue('center_fill_radius') * bassMultiplier * 1.5); // Extra bass sensitivity for center
-        parameters.setAudioModifier('truchet_radius', parameters.getBaseValue('truchet_radius') * bassMultiplier);
-        parameters.setAudioModifier('zoom_level', parameters.getBaseValue('zoom_level') * (1.0 + (audioLevels.bass * 0.3))); // Slight zoom pulse
-        
-        // Mid frequencies affect rotation and movement
-        parameters.setAudioModifier('rotation_speed', parameters.getBaseValue('rotation_speed') * midMultiplier);
-        parameters.setAudioModifier('plane_rotation_speed', parameters.getBaseValue('plane_rotation_speed') * midMultiplier);
-        parameters.setAudioModifier('fly_speed', parameters.getBaseValue('fly_speed') * (1.0 + (audioLevels.mid * 0.6)));
-        
-        // Treble affects visual complexity and color
-        const kaleidoscopeValue = parameters.getBaseValue('kaleidoscope_segments') * trebleMultiplier;
-        // Ensure kaleidoscope segments remain even (required for proper symmetry)
-        parameters.setAudioModifier('kaleidoscope_segments', Math.round(kaleidoscopeValue / 2) * 2);
-        parameters.setAudioModifier('color_intensity', parameters.getBaseValue('color_intensity') * trebleMultiplier);
-        parameters.setAudioModifier('color_speed', parameters.getBaseValue('color_speed') * trebleMultiplier);
-        
-        // Overall volume affects contrast and layer count
-        parameters.setAudioModifier('contrast', parameters.getBaseValue('contrast') * overallMultiplier);
-        parameters.setAudioModifier('layer_count', parameters.getBaseValue('layer_count') * (1.0 + (audioLevels.overall * 0.3)));
-        
-        // Path effects for more dynamic movement
-        parameters.setAudioModifier('path_scale', parameters.getBaseValue('path_scale') * (1.0 + (audioLevels.overall * 0.4)));
-        
-        // Camera parameters - pass through unchanged but set as modifiers to ensure consistency
-        parameters.setAudioModifier('camera_tilt_x', parameters.getBaseValue('camera_tilt_x'));
-        parameters.setAudioModifier('camera_tilt_y', parameters.getBaseValue('camera_tilt_y'));
-        parameters.setAudioModifier('camera_roll', parameters.getBaseValue('camera_roll'));
-        parameters.setAudioModifier('path_stability', parameters.getBaseValue('path_stability'));
+        if (hasCustomMappings) {
+            // Use advanced mapping system
+            parameters.getParameterKeys().forEach(paramKey => {
+                const mapping = this.parameterMappings[paramKey];
+                const baseValue = parameters.getBaseValue(paramKey);
+                
+                if (mapping && mapping.source) {
+                    let audioValue = 0;
+                    
+                    // Get audio value from mapped source
+                    switch (mapping.source) {
+                        case 'beat':
+                            audioValue = audioLevels.beat ? 1.0 : 0.0;
+                            break;
+                        case 'overall':
+                            audioValue = audioLevels.overall;
+                            break;
+                        case 'bass':
+                            audioValue = audioLevels.bass;
+                            break;
+                        case 'mid':
+                            audioValue = audioLevels.mid;
+                            break;
+                        case 'treble':
+                            audioValue = audioLevels.treble;
+                            break;
+                        default:
+                            // Use frequency band value
+                            if (audioLevels.frequencyBands[mapping.source]) {
+                                audioValue = audioLevels.frequencyBands[mapping.source].value;
+                            }
+                            break;
+                    }
+                    
+                    // Apply sensitivity and create multiplier
+                    const multiplier = 1.0 + (audioValue * mapping.sensitivity);
+                    let modifiedValue = baseValue * multiplier;
+                    
+                    // Special handling for parameters that need integer values
+                    if (paramKey === 'kaleidoscope_segments') {
+                        modifiedValue = Math.round(modifiedValue / 2) * 2; // Keep even
+                    } else if (paramKey === 'layer_count') {
+                        modifiedValue = Math.round(modifiedValue);
+                    }
+                    
+                    parameters.setAudioModifier(paramKey, modifiedValue);
+                } else {
+                    // No mapping - pass through unchanged
+                    parameters.setAudioModifier(paramKey, baseValue);
+                }
+            });
+        } else {
+            // Fallback to legacy hardcoded mappings for backward compatibility
+            const bassMultiplier = 1.0 + (audioLevels.bass * 0.8);      // 1.0 to 1.8x
+            const midMultiplier = 1.0 + (audioLevels.mid * 0.4);        // 1.0 to 1.4x
+            const trebleMultiplier = 1.0 + (audioLevels.treble * 0.3);  // 1.0 to 1.3x
+            const overallMultiplier = 1.0 + (audioLevels.overall * 0.5); // 1.0 to 1.5x
+            
+            // Bass effects - make the center circle really pulse!
+            parameters.setAudioModifier('center_fill_radius', parameters.getBaseValue('center_fill_radius') * bassMultiplier * 1.5); // Extra bass sensitivity for center
+            parameters.setAudioModifier('truchet_radius', parameters.getBaseValue('truchet_radius') * bassMultiplier);
+            parameters.setAudioModifier('zoom_level', parameters.getBaseValue('zoom_level') * (1.0 + (audioLevels.bass * 0.3))); // Slight zoom pulse
+            
+            // Mid frequencies affect rotation and movement
+            parameters.setAudioModifier('rotation_speed', parameters.getBaseValue('rotation_speed') * midMultiplier);
+            parameters.setAudioModifier('plane_rotation_speed', parameters.getBaseValue('plane_rotation_speed') * midMultiplier);
+            parameters.setAudioModifier('fly_speed', parameters.getBaseValue('fly_speed') * (1.0 + (audioLevels.mid * 0.6)));
+            
+            // Treble affects visual complexity and color
+            const kaleidoscopeValue = parameters.getBaseValue('kaleidoscope_segments') * trebleMultiplier;
+            // Ensure kaleidoscope segments remain even (required for proper symmetry)
+            parameters.setAudioModifier('kaleidoscope_segments', Math.round(kaleidoscopeValue / 2) * 2);
+            parameters.setAudioModifier('color_intensity', parameters.getBaseValue('color_intensity') * trebleMultiplier);
+            parameters.setAudioModifier('color_speed', parameters.getBaseValue('color_speed') * trebleMultiplier);
+            
+            // Overall volume affects contrast and layer count
+            parameters.setAudioModifier('contrast', parameters.getBaseValue('contrast') * overallMultiplier);
+            parameters.setAudioModifier('layer_count', parameters.getBaseValue('layer_count') * (1.0 + (audioLevels.overall * 0.3)));
+            
+            // Path effects for more dynamic movement
+            parameters.setAudioModifier('path_scale', parameters.getBaseValue('path_scale') * (1.0 + (audioLevels.overall * 0.4)));
+            
+            // Camera parameters - pass through unchanged but set as modifiers to ensure consistency
+            parameters.setAudioModifier('camera_tilt_x', parameters.getBaseValue('camera_tilt_x'));
+            parameters.setAudioModifier('camera_tilt_y', parameters.getBaseValue('camera_tilt_y'));
+            parameters.setAudioModifier('camera_roll', parameters.getBaseValue('camera_roll'));
+            parameters.setAudioModifier('path_stability', parameters.getBaseValue('path_stability'));
+        }
     }
 
     isReactive() {
         return this.audioReactive && (this.audioPlaying || this.microphoneActive);
+    }
+    
+    // Show advanced audio sync menu
+    showAdvancedAudioMenu() {
+        if (this.advancedMenuVisible) {
+            this.hideAdvancedAudioMenu();
+            return;
+        }
+        
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'advancedAudioOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+        `;
+
+        // Create main dialog
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: rgba(26, 26, 26, 0.3);
+            border: 2px solid #FF5722;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+            width: 900px;
+        `;
+
+        dialog.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #FF5722; margin: 0; font-size: 18px;">🎵 Advanced Audio Sync Control</h2>
+                <button id="advancedAudioClose" style="background: #666; color: #fff; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; font-family: 'Courier New', monospace;">✕ Close</button>
+            </div>
+            
+            <!-- Two Column Layout -->
+            <div style="display: flex; gap: 15px; height: 70vh;">
+                
+                <!-- Left Column: Equalizer Visualization + Controls -->
+                <div style="flex: 0 0 380px; display: flex; flex-direction: column; gap: 15px;">
+                    
+                    <!-- Equalizer Visualization Section -->
+                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444;">
+                        <h3 style="color: #4CAF50; margin-bottom: 15px; font-size: 14px;">📊 Real-Time Frequency Analysis</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; font-size: 12px; margin-bottom: 8px;">
+                                <input type="checkbox" id="beatDetectionToggle" ${this.beatDetection.enabled ? 'checked' : ''} style="margin-right: 8px;">
+                                Enable Beat Detection
+                            </label>
+                            
+                            <div style="display: flex; align-items: center; gap: 10px; font-size: 11px; margin-bottom: 8px;">
+                                <label>Beat Sensitivity:</label>
+                                <input type="range" id="beatThreshold" min="1.1" max="2.0" step="0.1" value="${this.beatDetection.threshold}" 
+                                       style="flex: 1;">
+                                <span id="beatThresholdValue">${this.beatDetection.threshold}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 10-Band Equalizer Display -->
+                        <div id="equalizerDisplay" style="display: flex; align-items: end; gap: 3px; height: 180px; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px;">
+                            <!-- Equalizer bars will be populated by JavaScript -->
+                        </div>
+                        
+                        <div style="font-size: 9px; color: #888; text-align: center; line-height: 1.2;">
+                            Sub│Bass│LMid│Mid│HMid│Pres│Brill│Air│Ultra│Super
+                        </div>
+                    </div>
+                    
+                    <!-- Control Buttons Section -->
+                    <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444;">
+                        <h3 style="color: #9C27B0; margin-bottom: 15px; font-size: 14px;">💾 Mapping Controls</h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <button id="resetMappings" style="padding: 8px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Reset All</button>
+                            <button id="presetMappings" style="padding: 8px; background: #2196F3; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load Preset</button>
+                            <button id="saveMappings" style="padding: 8px; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Save Mappings</button>
+                            <button id="loadMappings" style="padding: 8px; background: #FF9800; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Load From File</button>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Right Column: Parameter Mapping Only -->
+                <div style="flex: 1; background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444; overflow: hidden;">
+                    <h3 style="color: #FF9800; margin-bottom: 15px; font-size: 14px;">🎛️ Parameter → Audio Mapping</h3>
+                    
+                    <div style="font-size: 11px; color: #ccc; margin-bottom: 15px;">
+                        Map fractal parameters to audio frequencies and beat detection.
+                    </div>
+                    
+                    <div id="parameterMappings" style="height: calc(100% - 80px); overflow-y: auto; padding-right: 5px;">
+                        <!-- Parameter mapping controls will be populated here -->
+                    </div>
+                </div>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+        
+        this.advancedMenuVisible = true;
+        
+        // Set up event handlers
+        this.setupAdvancedMenuHandlers(overlay);
+        
+        // Initialize the display
+        this.updateEqualizerDisplay();
+        this.populateParameterMappings();
+        
+        // Start real-time updates
+        this.startEqualizerUpdates();
+    }
+    
+    hideAdvancedAudioMenu() {
+        const overlay = document.getElementById('advancedAudioOverlay');
+        if (overlay) {
+            document.body.removeChild(overlay);
+        }
+        this.advancedMenuVisible = false;
+        this.stopEqualizerUpdates();
+    }
+    
+    setupAdvancedMenuHandlers(overlay) {
+        // Close button
+        const closeBtn = document.getElementById('advancedAudioClose');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.hideAdvancedAudioMenu();
+        }
+        
+        // Beat detection toggle
+        const beatToggle = document.getElementById('beatDetectionToggle');
+        if (beatToggle) {
+            beatToggle.onchange = () => {
+                this.beatDetection.enabled = beatToggle.checked;
+            };
+        }
+        
+        // Beat threshold slider
+        const beatThreshold = document.getElementById('beatThreshold');
+        const beatThresholdValue = document.getElementById('beatThresholdValue');
+        if (beatThreshold && beatThresholdValue) {
+            beatThreshold.oninput = () => {
+                this.beatDetection.threshold = parseFloat(beatThreshold.value);
+                beatThresholdValue.textContent = beatThreshold.value;
+            };
+        }
+        
+        // Click outside to close
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                this.hideAdvancedAudioMenu();
+            }
+        };
+        
+        // Escape key to close
+        document.addEventListener('keydown', this.handleAdvancedMenuKeydown = (e) => {
+            if (e.key === 'Escape' && this.advancedMenuVisible) {
+                this.hideAdvancedAudioMenu();
+            }
+        });
+    }
+    
+    updateEqualizerDisplay() {
+        const container = document.getElementById('equalizerDisplay');
+        if (!container) return;
+        
+        // Clear existing bars
+        container.innerHTML = '';
+        
+        // Create bars for each frequency band
+        const bandNames = Object.keys(this.frequencyBands);
+        const colors = ['#F44336', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#8BC34A', '#4CAF50', '#00BCD4', '#2196F3', '#9C27B0'];
+        
+        bandNames.forEach((bandName, index) => {
+            const band = this.frequencyBands[bandName];
+            const bar = document.createElement('div');
+            bar.style.cssText = `
+                flex: 1;
+                background: ${colors[index] || '#666'};
+                margin: 0 1px;
+                border-radius: 2px 2px 0 0;
+                transition: height 0.1s ease;
+                min-height: 2px;
+                height: ${Math.max(2, band.value * 100)}%;
+            `;
+            container.appendChild(bar);
+        });
+    }
+    
+    populateParameterMappings() {
+        const container = document.getElementById('parameterMappings');
+        if (!container) return;
+        
+        // Get all available parameters
+        const artisticParams = this.app.parameters.getParameterKeys();
+        
+        container.innerHTML = artisticParams.map(paramKey => {
+            const param = this.app.parameters.getParameter(paramKey);
+            const mapping = this.parameterMappings[paramKey] || { source: '', sensitivity: 1.0 };
+            
+            return `
+                <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;" data-param="${paramKey}">
+                    <div style="font-size: 11px; color: #fff; margin-bottom: 6px;">${param.name}</div>
+                    <div style="display: flex; gap: 8px; align-items: center; font-size: 10px;">
+                        <select class="audio-mapping-select" data-param="${paramKey}" style="flex: 1; padding: 2px; background: #333; border: 1px solid #555; color: #fff; border-radius: 2px; font-size: 9px;">
+                            <option value="">No mapping</option>
+                            <option value="subBass" ${mapping.source === 'subBass' ? 'selected' : ''}>Sub-Bass (20-60Hz)</option>
+                            <option value="bass" ${mapping.source === 'bass' ? 'selected' : ''}>Bass (60-250Hz)</option>
+                            <option value="lowMid" ${mapping.source === 'lowMid' ? 'selected' : ''}>Low-Mid (250-500Hz)</option>
+                            <option value="mid" ${mapping.source === 'mid' ? 'selected' : ''}>Mid (500-2kHz)</option>
+                            <option value="highMid" ${mapping.source === 'highMid' ? 'selected' : ''}>High-Mid (2-4kHz)</option>
+                            <option value="presence" ${mapping.source === 'presence' ? 'selected' : ''}>Presence (4-6kHz)</option>
+                            <option value="brilliance" ${mapping.source === 'brilliance' ? 'selected' : ''}>Brilliance (6-8kHz)</option>
+                            <option value="air" ${mapping.source === 'air' ? 'selected' : ''}>Air (8-12kHz)</option>
+                            <option value="ultra" ${mapping.source === 'ultra' ? 'selected' : ''}>Ultra (12-16kHz)</option>
+                            <option value="super" ${mapping.source === 'super' ? 'selected' : ''}>Super (16-20kHz+)</option>
+                            <option value="beat" ${mapping.source === 'beat' ? 'selected' : ''}>Beat Detection</option>
+                            <option value="overall" ${mapping.source === 'overall' ? 'selected' : ''}>Overall Volume</option>
+                        </select>
+                        <input type="range" class="audio-sensitivity-slider" data-param="${paramKey}" 
+                               min="0" max="3" step="0.1" value="${mapping.sensitivity}" 
+                               style="width: 60px;" title="Sensitivity">
+                        <span class="sensitivity-value" style="width: 30px; text-align: center;">${mapping.sensitivity.toFixed(1)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Set up event handlers for the mapping controls
+        this.setupMappingEventHandlers();
+    }
+    
+    setupMappingEventHandlers() {
+        // Handle audio source selection changes
+        document.querySelectorAll('.audio-mapping-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const paramKey = e.target.dataset.param;
+                const source = e.target.value;
+                
+                if (source) {
+                    if (!this.parameterMappings[paramKey]) {
+                        this.parameterMappings[paramKey] = {};
+                    }
+                    this.parameterMappings[paramKey].source = source;
+                } else {
+                    delete this.parameterMappings[paramKey];
+                }
+            });
+        });
+        
+        // Handle sensitivity slider changes
+        document.querySelectorAll('.audio-sensitivity-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const paramKey = e.target.dataset.param;
+                const sensitivity = parseFloat(e.target.value);
+                
+                // Update display
+                const valueSpan = e.target.parentNode.querySelector('.sensitivity-value');
+                if (valueSpan) {
+                    valueSpan.textContent = sensitivity.toFixed(1);
+                }
+                
+                // Update mapping
+                if (!this.parameterMappings[paramKey]) {
+                    this.parameterMappings[paramKey] = { source: '', sensitivity: sensitivity };
+                } else {
+                    this.parameterMappings[paramKey].sensitivity = sensitivity;
+                }
+            });
+        });
+        
+        // Reset mappings button
+        const resetBtn = document.getElementById('resetMappings');
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                if (confirm('Reset all audio-to-parameter mappings?')) {
+                    this.parameterMappings = {};
+                    this.populateParameterMappings();
+                }
+            };
+        }
+        
+        // Preset mappings button
+        const presetBtn = document.getElementById('presetMappings');
+        if (presetBtn) {
+            presetBtn.onclick = () => {
+                this.loadPresetMappings();
+            };
+        }
+        
+        // Save mappings button
+        const saveBtn = document.getElementById('saveMappings');
+        if (saveBtn) {
+            saveBtn.onclick = () => {
+                this.saveMappingsToFile();
+            };
+        }
+        
+        // Load mappings button
+        const loadBtn = document.getElementById('loadMappings');
+        if (loadBtn) {
+            loadBtn.onclick = () => {
+                this.loadMappingsFromFile();
+            };
+        }
+    }
+    
+    loadPresetMappings() {
+        // Load a sensible default mapping preset
+        this.parameterMappings = {
+            'center_fill_radius': { source: 'bass', sensitivity: 2.0 },
+            'rotation_speed': { source: 'mid', sensitivity: 1.5 },
+            'color_intensity': { source: 'highMid', sensitivity: 1.2 },
+            'color_speed': { source: 'presence', sensitivity: 1.0 },
+            'kaleidoscope_segments': { source: 'brilliance', sensitivity: 0.8 },
+            'contrast': { source: 'overall', sensitivity: 1.3 },
+            'zoom_level': { source: 'subBass', sensitivity: 0.5 },
+            'fly_speed': { source: 'lowMid', sensitivity: 1.1 },
+            'truchet_radius': { source: 'air', sensitivity: 0.9 }
+        };
+        
+        this.populateParameterMappings();
+        this.app.ui.updateStatus('🎵 Loaded preset audio mappings', 'success');
+    }
+    
+    saveMappingsToFile() {
+        try {
+            // Create mapping data with metadata
+            const mappingData = {
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                beatDetection: {
+                    enabled: this.beatDetection.enabled,
+                    threshold: this.beatDetection.threshold,
+                    minTimeBetweenBeats: this.beatDetection.minTimeBetweenBeats
+                },
+                parameterMappings: this.parameterMappings
+            };
+            
+            // Convert to JSON string
+            const jsonString = JSON.stringify(mappingData, null, 2);
+            
+            // Create downloadable file
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `kaldao-audio-mappings-${new Date().toISOString().slice(0, -8).replace(/[:.]/g, '-')}.json`;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+            
+            this.app.ui.updateStatus('💾 Audio mappings saved to file', 'success');
+            
+        } catch (error) {
+            console.error('Error saving audio mappings:', error);
+            this.app.ui.updateStatus('❌ Failed to save audio mappings', 'error');
+        }
+    }
+    
+    loadMappingsFromFile() {
+        // Create file input element
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        
+        input.onchange = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                this.app.ui.updateStatus('📁 Loading audio mappings...', 'info');
+                
+                // Read file content
+                const text = await file.text();
+                const mappingData = JSON.parse(text);
+                
+                // Validate file structure
+                if (!mappingData.parameterMappings) {
+                    throw new Error('Invalid mapping file format: missing parameterMappings');
+                }
+                
+                // Load beat detection settings if available
+                if (mappingData.beatDetection) {
+                    this.beatDetection.enabled = mappingData.beatDetection.enabled || false;
+                    this.beatDetection.threshold = mappingData.beatDetection.threshold || 1.3;
+                    this.beatDetection.minTimeBetweenBeats = mappingData.beatDetection.minTimeBetweenBeats || 300;
+                }
+                
+                // Load parameter mappings
+                this.parameterMappings = mappingData.parameterMappings;
+                
+                // Update the UI
+                this.populateParameterMappings();
+                
+                // Update beat detection controls if menu is open
+                const beatToggle = document.getElementById('beatDetectionToggle');
+                const beatThreshold = document.getElementById('beatThreshold');
+                const beatThresholdValue = document.getElementById('beatThresholdValue');
+                
+                if (beatToggle) beatToggle.checked = this.beatDetection.enabled;
+                if (beatThreshold) beatThreshold.value = this.beatDetection.threshold;
+                if (beatThresholdValue) beatThresholdValue.textContent = this.beatDetection.threshold;
+                
+                const version = mappingData.version || 'unknown';
+                const timestamp = mappingData.timestamp ? new Date(mappingData.timestamp).toLocaleString() : 'unknown';
+                
+                this.app.ui.updateStatus(`📁 Loaded audio mappings (v${version}, ${timestamp})`, 'success');
+                
+            } catch (error) {
+                console.error('Error loading audio mappings:', error);
+                this.app.ui.updateStatus(`❌ Failed to load mappings: ${error.message}`, 'error');
+            }
+        };
+        
+        // Trigger file selection
+        input.click();
+    }
+    
+    startEqualizerUpdates() {
+        if (this.equalizerUpdateInterval) {
+            clearInterval(this.equalizerUpdateInterval);
+        }
+        
+        this.equalizerUpdateInterval = setInterval(() => {
+            if (this.advancedMenuVisible && this.audioReactive) {
+                this.updateEqualizerDisplay();
+            }
+        }, 50); // 20 FPS update rate
+    }
+    
+    stopEqualizerUpdates() {
+        if (this.equalizerUpdateInterval) {
+            clearInterval(this.equalizerUpdateInterval);
+            this.equalizerUpdateInterval = null;
+        }
+        
+        if (this.handleAdvancedMenuKeydown) {
+            document.removeEventListener('keydown', this.handleAdvancedMenuKeydown);
+            this.handleAdvancedMenuKeydown = null;
+        }
     }
 }

@@ -186,7 +186,13 @@ export class ControlsManager {
                 
             case 'KeyM':
                 e.preventDefault();
-                this.app.audio.toggleMicrophone();
+                if (e.shiftKey) {
+                    // Shift+M: Advanced audio sync menu
+                    this.app.audio.showAdvancedAudioMenu();
+                } else {
+                    // M: Regular microphone toggle
+                    this.app.audio.toggleMicrophone();
+                }
                 break;
                 
             case 'KeyO':
@@ -320,10 +326,15 @@ export class ControlsManager {
                 }
                 break;
                 
-            case 'KeyM':  // MICROPHONE TOGGLE IN DEBUG MODE
+            case 'KeyM':  // MICROPHONE CONTROLS IN DEBUG MODE
                 e.preventDefault();
-                // Allow microphone control even in debug mode for audio-reactive mathematical exploration
-                this.app.audio.toggleMicrophone();
+                if (e.shiftKey) {
+                    // Shift+M: Advanced audio sync menu (works in debug mode too)
+                    this.app.audio.showAdvancedAudioMenu();
+                } else {
+                    // M: Regular microphone toggle for audio-reactive mathematical exploration
+                    this.app.audio.toggleMicrophone();
+                }
                 break;
                 
             case 'Comma':  // RANDOMIZE DEBUG PARAMETERS ONLY

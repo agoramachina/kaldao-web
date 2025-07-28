@@ -39,7 +39,6 @@
         rgba(0, 0, 0, 0.98) 0%, 
         rgba(20, 20, 30, 0.98) 50%, 
         rgba(0, 0, 0, 0.98) 100%);
-    backdrop-filter: blur(2px);         /* Subtle blur adds depth and focus */
     
     /* Typography foundation for mathematical precision */
     font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;

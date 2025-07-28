@@ -432,16 +432,12 @@ export class DebugUIManager {
             
             let displayValue = this.formatParameterValue(param.value, param.step);
             
-            const textColor = isCurrent ? '#4CAF50' : '#ffffff';
-            const fontWeight = isCurrent ? 'bold' : 'normal';
-            const backgroundColor = isCurrent ? 'rgba(76, 175, 80, 0.1)' : 'transparent';
+            const selectionClass = isCurrent ? 'selected' : 'unselected';
             
-            const sliderValue = ((param.value - param.min) / (param.max - param.min)) * 100;
-            
-            debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="artistic" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px; display: flex; align-items: center;">`;
-            debugHTML += `<span class="param-name" style="flex: 0 0 180px; white-space: nowrap; overflow: hidden;">${param.name.padEnd(26)}: </span>`;
-            debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px; flex: 0 0 70px; text-align: right; white-space: nowrap;">${displayValue.padStart(8)}</span>`;
-            debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}" style="flex: 0 0 120px; margin-left: 10px;">`;
+            debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="artistic">`;
+            debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
+            debugHTML += `<span class="param-value" data-param-key="${key}">${displayValue.padStart(8)}</span>`;
+            debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;
             debugHTML += `</div>`;
         });
 
@@ -461,18 +457,12 @@ export class DebugUIManager {
                 // Format with appropriate decimal places based on step size
                 let displayValue = this.formatParameterValue(param.value, param.step);
                 
-                // Style the current parameter differently for clear visual feedback
-                const textColor = isCurrent ? '#4CAF50' : '#ffffff';
-                const fontWeight = isCurrent ? 'bold' : 'normal';
-                const backgroundColor = isCurrent ? 'rgba(76, 175, 80, 0.1)' : 'transparent';
+                const selectionClass = isCurrent ? 'selected' : 'unselected';
                 
-                // ENHANCEMENT: Add click handlers for mouse interaction
-                const sliderValue = ((param.value - param.min) / (param.max - param.min)) * 100;
-                
-                debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="debug" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px; display: flex; align-items: center;">`;
-                debugHTML += `<span class="param-name" style="flex: 0 0 180px; white-space: nowrap; overflow: hidden;">${param.name.padEnd(26)}: </span>`;
-                debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px; flex: 0 0 70px; text-align: right; white-space: nowrap;">${displayValue.padStart(8)}</span>`;
-                debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}" style="flex: 0 0 120px; margin-left: 10px;">`;
+                debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="debug">`;
+                debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
+                debugHTML += `<span class="param-value" data-param-key="${key}">${displayValue.padStart(8)}</span>`;
+                debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;
                 debugHTML += `</div>`;
             });
         });
@@ -517,7 +507,7 @@ export class DebugUIManager {
             }
             
             // Restore appropriate non-selected styling using CSS classes (preserves layout)
-            line.classList.remove('debug-param-current', 'selected');
+            line.classList.remove('selected');
             line.classList.add('unselected');
         });
         
@@ -525,7 +515,7 @@ export class DebugUIManager {
         const currentLine = document.querySelector(`[data-param-key="${currentKey}"]`);
         if (currentLine) {
             currentLine.classList.remove('unselected');
-            currentLine.classList.add('debug-param-current', 'selected');
+            currentLine.classList.add('selected');
         }
         
         // Update the current parameter info panel

@@ -196,7 +196,20 @@
 .debug-param-line.selected {
     color: #4CAF50 !important;
     font-weight: bold !important;
-    background: rgba(76, 175, 80, 0.1) !important;
+    
+    /* Background highlight creates area of focus */
+    background: linear-gradient(90deg, 
+        rgba(76, 175, 80, 0.15) 0%, 
+        rgba(76, 175, 80, 0.08) 100%) !important;
+    
+    /* Subtle border reinforces selection */
+    border-left: 3px solid #4CAF50 !important;
+    
+    /* Enhanced visual treatment for current parameter */
+    box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.2) !important;
+    
+    /* Slight scale creates depth without disrupting layout */
+    transform: translateX(2px) !important;
 }
 
 .debug-param-line.unselected {
@@ -210,25 +223,7 @@
  * The highlighting needs to be obvious enough to guide attention but not so bright
  * that it becomes distracting during extended use.
  */
-.debug-param-current,
-.debug-param-line[style*="color: #4CAF50"] {
-    color: #4CAF50 !important;             /* Green indicates current selection */
-    font-weight: bold !important;
-    
-    /* Background highlight creates area of focus */
-    background: linear-gradient(90deg, 
-        rgba(76, 175, 80, 0.15) 0%, 
-        rgba(76, 175, 80, 0.08) 100%) !important;
-    
-    /* Subtle border reinforces selection */
-    border-left: 3px solid #4CAF50;
-    
-    /* Enhanced visual treatment for current parameter */
-    box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.2);
-    
-    /* Slight scale creates depth without disrupting layout */
-    transform: translateX(2px);
-}
+/* Removed conflicting debug-param-current rules - using .selected instead */
 
 /*
  * Modified parameter indication helps users track which mathematical values
@@ -418,10 +413,10 @@
         margin: 15px 0 8px 0 !important;
     }
     
-    /* Enhanced current parameter visibility on mobile */
-    .debug-param-current {
-        border-left-width: 4px;
-        transform: translateX(3px);
+    /* Enhanced selected parameter visibility on mobile */
+    .debug-param-line.selected {
+        border-left-width: 4px !important;
+        transform: translateX(3px) !important;
     }
 }
 
@@ -457,7 +452,7 @@
  * Hover states for mouse-based mathematical exploration
  * Subtle feedback helps users understand interactive elements
  */
-.debug-param-line:hover:not(.debug-param-current) {
+.debug-param-line:hover:not(.selected) {
     background: rgba(255, 255, 255, 0.05);
     border-left: 2px solid rgba(255, 255, 255, 0.2);
     transform: translateX(1px);
@@ -567,18 +562,18 @@
     border: none;
 }
 
-/* Current parameter slider highlighting */
-.debug-param-current .param-slider {
+/* Selected parameter slider highlighting */
+.debug-param-line.selected .param-slider {
     background: rgba(76, 175, 80, 0.3);
 }
 
-.debug-param-current .param-slider::-webkit-slider-thumb {
+.debug-param-line.selected .param-slider::-webkit-slider-thumb {
     background: #4CAF50;
     border-color: #4CAF50;
     box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
 }
 
-.debug-param-current .param-slider::-moz-range-thumb {
+.debug-param-line.selected .param-slider::-moz-range-thumb {
     background: #4CAF50;
     border-color: #4CAF50;
     box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
@@ -660,7 +655,7 @@
         color: #ffffff;
     }
     
-    .debug-param-current {
+    .debug-param-line.selected {
         background: rgba(76, 175, 80, 0.3) !important;
         color: #ffffff !important;
     }
@@ -703,7 +698,7 @@
         padding: 20px;
     }
     
-    .debug-param-current {
+    .debug-param-line.selected {
         background: #f0f0f0 !important;
         color: #000000 !important;
     }

@@ -180,3 +180,62 @@ Mathematical constants exposed from shader:
 - **Parameter Validation**: Range checking with user feedback
 - **Error Handling**: Graceful degradation with status messages
 - **WebGL Debugging**: Check browser console for shader compilation errors
+
+## CRITICAL: Debug UI Parameter Highlighting
+
+**PROBLEM**: The artistic parameter highlighting in debug mode breaks frequently when modifying `debug-ui.js` or `debug.css`.
+
+**ROOT CAUSE**: Inline styles in HTML generation override CSS classes, regardless of `!important` declarations.
+
+**WORKING SOLUTION** (DO NOT DEVIATE FROM THIS):
+
+1. **HTML Generation** (`updateDebugMenuDisplay()` in `debug-ui.js`):
+   ```javascript
+   // ✅ CORRECT - NO inline styles, only CSS classes
+   const selectionClass = isCurrent ? 'selected' : 'unselected';
+   debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="artistic">`;
+   debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
+   debugHTML += `<span class="param-value" data-param-key="${key}">${displayValue.padStart(8)}</span>`;
+   debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;
+   debugHTML += `</div>`;
+   
+   // ❌ WRONG - inline styles break highlighting
+   debugHTML += `<span style="color: #fff; flex: 0 0 70px;">...</span>`;
+   ```
+
+2. **Selection Updates** (`updateSelectionOnly()` in `debug-ui.js`):
+   ```javascript
+   // ✅ CORRECT - Only use 'selected'/'unselected' classes
+   line.classList.remove('selected');
+   line.classList.add('unselected');
+   
+   currentLine.classList.remove('unselected');
+   currentLine.classList.add('selected');
+   
+   // ❌ WRONG - multiple conflicting classes break highlighting
+   currentLine.classList.add('debug-param-current', 'selected');
+   ```
+
+3. **CSS Classes** (`debug.css`):
+   ```css
+   /* ✅ CORRECT - Simple, clear selection states with !important */
+   .debug-param-line.selected {
+       color: #4CAF50 !important;
+       font-weight: bold !important;
+       background: rgba(76, 175, 80, 0.1) !important;
+   }
+   
+   .debug-param-line.unselected {
+       color: #ffffff !important;
+       font-weight: normal !important;
+       background: transparent !important;
+   }
+   ```
+
+**WHAT NOT TO DO**:
+- ❌ Never add `style="..."` attributes in HTML generation
+- ❌ Never mix `debug-param-current` with `selected` classes  
+- ❌ Never remove `!important` from selection CSS rules
+- ❌ Never modify CSS specificity by changing class combinations
+
+**TESTING**: After ANY changes to debug UI, immediately test that artistic parameters (at top of debug menu) highlight in green when selected with arrow keys.

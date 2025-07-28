@@ -23,16 +23,13 @@ export class DebugUIManager {
     buildDebugParameterList() {
         this.allDebugKeys = [];
         
-        // Start with artistic parameters for easy access
-        this.allDebugKeys.push(...this.app.parameters.getParameterKeys());
-        
-        // Add debug parameters organized by category
+        // Add all parameters organized by category (includes artistic parameters as first category)
         const categories = this.app.parameters.getDebugParameterCategories();
         Object.keys(categories).forEach(categoryName => {
             this.allDebugKeys.push(...categories[categoryName]);
         });
 
-        console.log('Debug parameter navigation order (artistic + debug):', this.allDebugKeys);
+        console.log('Debug parameter navigation order (unified categories):', this.allDebugKeys);
     }
 
     // Toggle debug menu visibility
@@ -218,15 +215,15 @@ export class DebugUIManager {
                 }
             });
             
-            // Add visual feedback for clickable values
+            // Add visual feedback for clickable values using CSS classes only
             valueSpan.addEventListener('mouseenter', (e) => {
                 if (!this.keyboardNavigationActive) {
-                    valueSpan.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
+                    valueSpan.classList.add('param-value-hover');
                 }
             });
             
             valueSpan.addEventListener('mouseleave', (e) => {
-                valueSpan.style.backgroundColor = 'transparent';
+                valueSpan.classList.remove('param-value-hover');
             });
         });
         
@@ -419,39 +416,17 @@ export class DebugUIManager {
         const categories = this.app.parameters.getDebugParameterCategories();
         let debugHTML = '';
 
-        // ENHANCEMENT: Include all artistic parameters in debug view for comprehensive control
-        debugHTML += '<div class="debug-category-header" style="color: #4CAF50; font-weight: bold; margin: 15px 0 8px 0; font-size: 14px;">ARTISTIC PARAMETERS</div>';
-        
-        // Add all regular artistic parameters to debug view
-        this.app.parameters.parameterKeys.forEach(key => {
-            const param = this.app.parameters.getParameter(key);
-            if (!param) return;
-            
-            const index = this.app.parameters.parameterKeys.indexOf(key);
-            const isCurrent = key === this.getCurrentSelectedParameterKey();
-            
-            let displayValue = this.formatParameterValue(param.value, param.step);
-            
-            const selectionClass = isCurrent ? 'selected' : 'unselected';
-            
-            debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="artistic">`;
-            debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
-            debugHTML += `<span class="param-value" data-param-key="${key}">${displayValue.padStart(8)}</span>`;
-            debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;
-            debugHTML += `</div>`;
-        });
-
-        // Build the display category by category for debug parameters
+        // Build the display category by category for all parameters (artistic + debug)
         Object.keys(categories).forEach(categoryName => {
-            // Category header with consistent styling
-            debugHTML += `<div class="debug-category-header" style="color: #00BCD4; font-weight: bold; margin: 15px 0 8px 0; font-size: 14px;">${categoryName}</div>`;
+            // Category header with consistent styling - add special class for artistic parameters
+            const categoryClass = categoryName === 'ARTISTIC PARAMETERS' ? 'debug-category-header artistic-category' : 'debug-category-header';
+            debugHTML += `<div class="${categoryClass}">${categoryName}</div>`;
             
             // Parameters in this category
             categories[categoryName].forEach(key => {
                 const param = this.app.parameters.getParameter(key);
                 if (!param) return;
                 
-                const index = this.allDebugKeys.indexOf(key);
                 const isCurrent = key === this.getCurrentSelectedParameterKey();
                 
                 // Format with appropriate decimal places based on step size
@@ -459,7 +434,10 @@ export class DebugUIManager {
                 
                 const selectionClass = isCurrent ? 'selected' : 'unselected';
                 
-                debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="debug">`;
+                // Determine parameter type based on category
+                const paramType = categoryName === 'ARTISTIC PARAMETERS' ? 'artistic' : 'debug';
+                
+                debugHTML += `<div class="debug-param-line ${selectionClass}" data-param-key="${key}" data-param-type="${paramType}">`;
                 debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
                 debugHTML += `<span class="param-value" data-param-key="${key}">${displayValue.padStart(8)}</span>`;
                 debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;

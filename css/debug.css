@@ -143,6 +143,16 @@
     text-transform: uppercase;
 }
 
+/* Artistic parameters category special styling */
+.debug-category-header.artistic-category {
+    color: #4CAF50 !important;
+}
+
+/* Parameter value hover effect */
+.param-value-hover {
+    background-color: rgba(76, 175, 80, 0.2) !important;
+}
+
 /*
  * Individual parameter lines create the core interaction surface for mathematical exploration.
  * The design supports rapid scanning, precise value reading, and clear indication of
@@ -202,14 +212,10 @@
         rgba(76, 175, 80, 0.15) 0%, 
         rgba(76, 175, 80, 0.08) 100%) !important;
     
-    /* Subtle border reinforces selection */
-    border-left: 3px solid #4CAF50 !important;
+    /* Use inset border to avoid width expansion */
+    box-shadow: inset 3px 0 0 0 #4CAF50, inset 0 0 0 1px rgba(76, 175, 80, 0.2) !important;
     
-    /* Enhanced visual treatment for current parameter */
-    box-shadow: inset 0 0 0 1px rgba(76, 175, 80, 0.2) !important;
-    
-    /* Slight scale creates depth without disrupting layout */
-    transform: translateX(2px) !important;
+    /* Remove transform to prevent width issues */
 }
 
 .debug-param-line.unselected {
@@ -415,8 +421,7 @@
     
     /* Enhanced selected parameter visibility on mobile */
     .debug-param-line.selected {
-        border-left-width: 4px !important;
-        transform: translateX(3px) !important;
+        box-shadow: inset 4px 0 0 0 #4CAF50, inset 0 0 0 1px rgba(76, 175, 80, 0.2) !important;
     }
 }
 
@@ -454,8 +459,7 @@
  */
 .debug-param-line:hover:not(.selected) {
     background: rgba(255, 255, 255, 0.05);
-    border-left: 2px solid rgba(255, 255, 255, 0.2);
-    transform: translateX(1px);
+    box-shadow: inset 2px 0 0 0 rgba(255, 255, 255, 0.2);
 }
 
 /* Disable transitions during keyboard navigation to prevent animation re-triggering */
@@ -467,13 +471,11 @@
 /* Disable hover effects when parameter value is being edited */
 .debug-param-line:has(input) {
     transition: none !important;
-    transform: none !important;
 }
 
 .debug-param-line:has(input):hover {
     background: transparent !important;
-    border-left-color: transparent !important;
-    transform: none !important;
+    box-shadow: none !important;
 }
 
 .param-value:has(input) {

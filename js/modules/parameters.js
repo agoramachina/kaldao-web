@@ -313,7 +313,11 @@ export class ParameterManager {
     }
 
     getDebugParameterCategories() {
-        return this.debugParameterCategories;
+        // Include artistic parameters as the first category in debug mode
+        return {
+            'ARTISTIC PARAMETERS': this.parameterKeys,
+            ...this.debugParameterCategories
+        };
     }
 
     getAllDebugParameterKeys() {

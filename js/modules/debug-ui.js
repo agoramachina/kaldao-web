@@ -900,6 +900,11 @@ export class DebugUIManager {
     
     // Show debug logging control popup
     showDebugLoggingControls() {
+        // Don't create if already visible
+        if (this.debugLoggingMenuVisible) {
+            return;
+        }
+        
         // Create menu dialog (no full-screen overlay)
         const dialog = document.createElement('div');
         dialog.id = 'debugLoggingOverlay';

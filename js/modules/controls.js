@@ -204,7 +204,11 @@ export class ControlsManager {
                 
             case 'KeyD':  // DEBUG LOGGING CONTROLS (available in normal mode too)
                 e.preventDefault();
-                this.app.debugUI.showDebugLoggingControls();
+                if (this.app.debugUI.debugLoggingMenuVisible) {
+                    this.app.debugUI.hideDebugLoggingControls();
+                } else {
+                    this.app.debugUI.showDebugLoggingControls();
+                }
                 break;
                 
             case 'Semicolon':  // THE DEBUG MODE TOGGLE
@@ -296,8 +300,12 @@ export class ControlsManager {
                 
             case 'KeyD':  // DEBUG LOGGING CONTROLS
                 e.preventDefault();
-                // Show popup to control what gets logged to console
-                this.app.debugUI.showDebugLoggingControls();
+                // Toggle debug logging controls popup
+                if (this.app.debugUI.debugLoggingMenuVisible) {
+                    this.app.debugUI.hideDebugLoggingControls();
+                } else {
+                    this.app.debugUI.showDebugLoggingControls();
+                }
                 break;
                 
             case 'KeyH':  // HELP IN DEBUG MODE

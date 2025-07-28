@@ -635,21 +635,15 @@ export class DebugUIManager {
     }
 
     // Randomize debug parameters (use with caution!)
-    // Only randomizes mathematically safe parameters to avoid breaking the visualization
+    // Randomizes ALL debug parameters - can create wild/broken visualizations!
     randomizeDebugParameters() {
         this.app.saveStateForUndo();
         
-        // Only randomize parameters that are safe to adjust without breaking the visualization
-        // Avoid randomizing rendering quality and critical mathematical constants
-        const safeToRandomize = [
-            'path_freq_primary', 'path_freq_secondary', 'path_freq_tertiary',
-            'kaleidoscope_smoothing', 'pattern_threshold_full', 
-            'pattern_threshold_partial_a', 'pattern_threshold_partial_b',
-            'fov_distortion', 'perspective_curve', 'layer_fade_start'
-        ];
+        // Get ALL debug parameters and randomize them
+        const allDebugKeys = this.app.parameters.getAllDebugParameterKeys();
         
         let randomizedCount = 0;
-        safeToRandomize.forEach(key => {
+        allDebugKeys.forEach(key => {
             const param = this.app.parameters.getParameter(key);
             if (param) {
                 const range = param.max - param.min;
@@ -661,7 +655,7 @@ export class DebugUIManager {
         
         this.parameterModificationCount += randomizedCount;
         this.updateDebugMenuDisplay();
-        this.app.ui.updateStatus(`${randomizedCount} debug parameters randomized safely`, 'success');
+        this.app.ui.updateStatus(`🎲 ${randomizedCount} debug parameters randomized (ALL OF THEM!)`, 'success');
     }
 
     // Export current debug parameter state for sharing

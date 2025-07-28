@@ -11,7 +11,6 @@
 
 import { ParameterManager } from './modules/parameters.js';
 import { AudioSystem } from './modules/audio.js';
-import { OSCSystem } from './modules/osc.js';
 import { ControlsManager } from './modules/controls.js';
 import { Renderer } from './modules/renderer.js';
 import { UIManager } from './modules/ui.js';
@@ -26,7 +25,6 @@ class KaldaoApp {
         // Each module has a specific responsibility and communicates through well-defined interfaces
         this.parameters = new ParameterManager();    // Mathematical state management (artistic + debug)
         this.audio = new AudioSystem();               // Audio analysis and reactive parameter modulation
-        this.osc = new OSCSystem();                   // OSC hardware control system
         this.controls = new ControlsManager();        // Context-sensitive input handling
         this.renderer = new Renderer();               // WebGL mathematical visualization
         this.ui = new UIManager();                    // Artistic interface management
@@ -92,7 +90,6 @@ class KaldaoApp {
             this.controls.init(this);                 // Context-sensitive input handling
             this.ui.init(this);                       // Artistic interface management
             this.audio.init(this);                    // Audio analysis system
-            this.osc.init(this);                      // OSC hardware control system
             this.fileManager.init(this);              // State persistence system
             this.debugUI.init(this);                  // Mathematical exploration interface
             this.color.init(this);                    // Color system management

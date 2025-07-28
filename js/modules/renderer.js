@@ -457,7 +457,8 @@ export class Renderer {
         const colorUniforms = [
             // 'u_use_color_palette', 'u_use_layer_colors' removed - replaced by u_color_mode
             'u_invert_colors', 'u_color_mode',
-            'u_palette_a', 'u_palette_b', 'u_palette_c', 'u_palette_d'
+            'u_palette_a', 'u_palette_b', 'u_palette_c', 'u_palette_d',
+            'u_layer_colors', 'u_layer_color_count'
         ];
         
         // Create the complete uniform registry

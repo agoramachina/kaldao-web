@@ -14,41 +14,98 @@ export class ColorManager {
         this.colorPreviewUpdateInterval = null;
         this.handleAdvancedColorMenuKeydown = null;
         
-        // Color palette system - mathematical coefficients for procedural color generation
-        this.colorPalettes = [
-            { name: "B&W", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.0, 0.0] },
-            { name: "Rainbow", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.33, 0.67] },
-            { name: "Fire", a: [0.5, 0.2, 0.1], b: [0.5, 0.3, 0.2], c: [2.0, 1.0, 0.5], d: [0.0, 0.25, 0.5] },
-            { name: "Ocean", a: [0.2, 0.5, 0.8], b: [0.2, 0.3, 0.5], c: [1.0, 1.5, 2.0], d: [0.0, 0.2, 0.5] },
-            { name: "Purple", a: [0.8, 0.5, 0.4], b: [0.2, 0.4, 0.2], c: [2.0, 1.0, 1.0], d: [0.0, 0.25, 0.25] },
-            { name: "Neon", a: [0.2, 0.2, 0.2], b: [0.8, 0.8, 0.8], c: [1.0, 2.0, 1.5], d: [0.0, 0.5, 0.8] },
-            { name: "Sunset", a: [0.7, 0.3, 0.2], b: [0.3, 0.2, 0.1], c: [1.5, 1.0, 0.8], d: [0.0, 0.1, 0.3] }
-        ];
+        // Color palette system - loaded from JSON presets
+        this.colorPalettes = [];
+        this.layerColorPalettes = [];
         
-        // Layer color system - discrete colors assigned to specific layers
-        this.layerColorPalettes = [
-            { 
-                name: "Default", 
-                colors: [
-                    "#8E24AA", "#1976D2", "#00796B", "#388E3C", "#F57C00", 
-                    "#E64A19", "#C62828", "#AD1457", "#6A1B9A", "#4527A0", 
-                    "#D32F2F", "#455A64"
-                ]
-            },
-            { 
-                name: "Sunset", 
-                colors: ["#F9C80E", "#F86624", "#EA3546", "#662E9B", "#43BCCD"]
-            }
-        ];
-        
-        // Track current layer palette index
+        // Track current palette indices
         this.currentLayerPaletteIndex = 0;
+        
+        // Preset loading
+        this.presetsLoaded = false;
     }
 
-    init(app) {
+    async init(app) {
         this.app = app;
+        
+        // Load presets from JSON files
+        await this.loadPresets();
+        
         // Initialize color mode based on app state
         this.syncColorModeFromLegacyFlags();
+    }
+    
+    // Load color presets from JSON files
+    async loadPresets() {
+        console.log('🎨 Loading color presets from JSON files...');
+        
+        try {
+            // Load classic mathematical palettes
+            const classicFiles = ['bw', 'rainbow', 'fire', 'ocean', 'purple', 'neon', 'sunset'];
+            this.colorPalettes = [];
+            
+            for (const filename of classicFiles) {
+                try {
+                    const response = await fetch(`presets/colors/classic/${filename}.json`);
+                    if (response.ok) {
+                        const palette = await response.json();
+                        // Convert to legacy format for compatibility
+                        this.colorPalettes.push({
+                            name: palette.name,
+                            a: palette.coefficients.a,
+                            b: palette.coefficients.b,
+                            c: palette.coefficients.c,
+                            d: palette.coefficients.d
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Failed to load classic palette ${filename}:`, error);
+                }
+            }
+            
+            // Load layer color palettes
+            const layerFiles = ['default', 'sunset'];
+            this.layerColorPalettes = [];
+            
+            for (const filename of layerFiles) {
+                try {
+                    const response = await fetch(`presets/colors/layers/${filename}.json`);
+                    if (response.ok) {
+                        const palette = await response.json();
+                        this.layerColorPalettes.push({
+                            name: palette.name,
+                            colors: palette.colors
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Failed to load layer palette ${filename}:`, error);
+                }
+            }
+            
+            console.log(`✅ Loaded ${this.colorPalettes.length} classic palettes and ${this.layerColorPalettes.length} layer palettes`);
+            this.presetsLoaded = true;
+            
+        } catch (error) {
+            console.error('Failed to load color presets:', error);
+            // Fallback to hardcoded values if loading fails
+            this.loadFallbackPalettes();
+        }
+    }
+    
+    // Fallback palettes if JSON loading fails
+    loadFallbackPalettes() {
+        console.log('⚠️ Using fallback hardcoded palettes');
+        
+        this.colorPalettes = [
+            { name: "B&W", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.0, 0.0] },
+            { name: "Rainbow", a: [0.5, 0.5, 0.5], b: [0.5, 0.5, 0.5], c: [1.0, 1.0, 1.0], d: [0.0, 0.33, 0.67] }
+        ];
+        
+        this.layerColorPalettes = [
+            { name: "Default", colors: ["#8E24AA", "#1976D2", "#00796B", "#388E3C"] }
+        ];
+        
+        this.presetsLoaded = true;
     }
     
     // Sync the new color mode system with legacy flags

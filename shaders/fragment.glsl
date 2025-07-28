@@ -101,6 +101,10 @@ uniform vec3 u_palette_b;                  // Color palette coefficient B
 uniform vec3 u_palette_c;                  // Color palette coefficient C
 uniform vec3 u_palette_d;                  // Color palette coefficient D
 
+// Layer colors (loaded from presets, not hardcoded)
+uniform vec3 u_layer_colors[12];           // Array of layer colors from JSON presets
+uniform int u_layer_color_count;           // Number of colors in current layer palette
+
 #define PI 3.14159265359
 
 // ====================
@@ -374,20 +378,9 @@ vec4 plane(vec3 ro, vec3 rd, vec3 pp, vec3 off, float aa, float n) {
     vec3 layerColor = vec3(1.0); // default white for traditional black & white aesthetic
     
     if (u_color_mode > 1.5) { // Mode 2: Layer Colors
-        // DEBUG FEATURE: Select layer color based on layer number
-        float layerIndex = mod(n, 12.0);
-        if (layerIndex < 1.0) layerColor = vec3(0.557, 0.141, 0.667); // #8E24AA - Purple
-        else if (layerIndex < 2.0) layerColor = vec3(0.098, 0.463, 0.824); // #1976D2 - Blue
-        else if (layerIndex < 3.0) layerColor = vec3(0.000, 0.475, 0.420); // #00796B - Teal
-        else if (layerIndex < 4.0) layerColor = vec3(0.220, 0.557, 0.235); // #388E3C - Green
-        else if (layerIndex < 5.0) layerColor = vec3(0.961, 0.486, 0.000); // #F57C00 - Orange
-        else if (layerIndex < 6.0) layerColor = vec3(0.902, 0.290, 0.098); // #E64A19 - Red-Orange
-        else if (layerIndex < 7.0) layerColor = vec3(0.776, 0.157, 0.157); // #C62828 - Red
-        else if (layerIndex < 8.0) layerColor = vec3(0.678, 0.078, 0.341); // #AD1457 - Pink
-        else if (layerIndex < 9.0) layerColor = vec3(0.416, 0.106, 0.604); // #6A1B9A - Dark Purple
-        else if (layerIndex < 10.0) layerColor = vec3(0.271, 0.153, 0.627); // #4527A0 - Indigo
-        else if (layerIndex < 11.0) layerColor = vec3(0.827, 0.184, 0.184); // #D32F2F - Light Red
-        else layerColor = vec3(0.271, 0.353, 0.392); // #455A64 - Blue Grey
+        // Use dynamic layer colors from JSON presets (not hardcoded)
+        int layerIndex = int(mod(n, float(u_layer_color_count)));
+        layerColor = layerIndex < u_layer_color_count ? u_layer_colors[layerIndex] : vec3(1.0);
     }
     
     // Convert distance to color with layer-specific fill color

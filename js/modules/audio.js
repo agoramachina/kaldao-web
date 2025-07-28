@@ -502,55 +502,69 @@ export class AudioSystem {
         const hasCustomMappings = Object.keys(this.parameterMappings).length > 0;
         
         if (hasCustomMappings) {
-            // Use advanced mapping system
-            parameters.getParameterKeys().forEach(paramKey => {
-                const mapping = this.parameterMappings[paramKey];
-                const baseValue = parameters.getBaseValue(paramKey);
-                
-                if (mapping && mapping.source) {
-                    let audioValue = 0;
+            // Use advanced mapping system - collect all parameter modifications
+            const parameterModifications = {};
+            
+            // Get all parameters (artistic + debug)
+            const allParams = [...parameters.getParameterKeys(), ...parameters.getAllDebugParameterKeys()];
+            
+            // Initialize all parameters with base values
+            allParams.forEach(paramKey => {
+                const baseValue = parameters.getBaseValue ? parameters.getBaseValue(paramKey) : parameters.getValue(paramKey);
+                parameterModifications[paramKey] = baseValue;
+            });
+            
+            // Process all mappings and accumulate effects
+            Object.entries(this.parameterMappings).forEach(([mappingKey, mapping]) => {
+                if (mapping.source && mapping.paramKey) {
+                    const paramKey = mapping.paramKey;
+                    const baseValue = parameterModifications[paramKey];
                     
-                    // Get audio value from mapped source
-                    switch (mapping.source) {
-                        case 'beat':
-                            audioValue = audioLevels.beat ? 1.0 : 0.0;
-                            break;
-                        case 'overall':
-                            audioValue = audioLevels.overall;
-                            break;
-                        case 'bass':
-                            audioValue = audioLevels.bass;
-                            break;
-                        case 'mid':
-                            audioValue = audioLevels.mid;
-                            break;
-                        case 'treble':
-                            audioValue = audioLevels.treble;
-                            break;
-                        default:
-                            // Use frequency band value
-                            if (audioLevels.frequencyBands[mapping.source]) {
-                                audioValue = audioLevels.frequencyBands[mapping.source].value;
-                            }
-                            break;
+                    if (baseValue !== undefined) {
+                        let audioValue = 0;
+                        
+                        // Get audio value from mapped source
+                        switch (mapping.source) {
+                            case 'beat':
+                                audioValue = audioLevels.beat ? 1.0 : 0.0;
+                                break;
+                            case 'overall':
+                                audioValue = audioLevels.overall;
+                                break;
+                            case 'bass':
+                                audioValue = audioLevels.bass;
+                                break;
+                            case 'mid':
+                                audioValue = audioLevels.mid;
+                                break;
+                            case 'treble':
+                                audioValue = audioLevels.treble;
+                                break;
+                            default:
+                                // Use frequency band value
+                                if (audioLevels.frequencyBands[mapping.source]) {
+                                    audioValue = audioLevels.frequencyBands[mapping.source].value;
+                                }
+                                break;
+                        }
+                        
+                        // Apply sensitivity and add to the existing value
+                        const multiplier = 1.0 + (audioValue * mapping.sensitivity);
+                        parameterModifications[paramKey] = baseValue * multiplier;
                     }
-                    
-                    // Apply sensitivity and create multiplier
-                    const multiplier = 1.0 + (audioValue * mapping.sensitivity);
-                    let modifiedValue = baseValue * multiplier;
-                    
-                    // Special handling for parameters that need integer values
-                    if (paramKey === 'kaleidoscope_segments') {
-                        modifiedValue = Math.round(modifiedValue / 2) * 2; // Keep even
-                    } else if (paramKey === 'layer_count') {
-                        modifiedValue = Math.round(modifiedValue);
-                    }
-                    
-                    parameters.setAudioModifier(paramKey, modifiedValue);
-                } else {
-                    // No mapping - pass through unchanged
-                    parameters.setAudioModifier(paramKey, baseValue);
                 }
+            });
+            
+            // Apply all modifications
+            Object.entries(parameterModifications).forEach(([paramKey, modifiedValue]) => {
+                // Special handling for parameters that need integer values
+                if (paramKey === 'kaleidoscope_segments') {
+                    modifiedValue = Math.round(modifiedValue / 2) * 2; // Keep even
+                } else if (paramKey === 'layer_count') {
+                    modifiedValue = Math.round(modifiedValue);
+                }
+                
+                parameters.setAudioModifier(paramKey, modifiedValue);
             });
         } else {
             // Fallback to legacy hardcoded mappings for backward compatibility
@@ -708,7 +722,7 @@ export class AudioSystem {
                     
                     <!-- Control Buttons Section -->
                     <div style="background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 12px; border: 1px solid #444;">
-                        <h3 style="color: #9C27B0; margin-bottom: 12px; font-size: 14px;">💾 Mapping Controls</h3>
+                        <h3 style="color: #c41b83ff; margin-bottom: 12px; font-size: 14px;">💾 Manage Advanced Audio</h3>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <button id="resetMappings" style="padding: 6px; background: #F44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;">Reset All</button>
@@ -720,16 +734,16 @@ export class AudioSystem {
                     
                 </div>
                 
-                <!-- Right Column: Parameter Mapping Only -->
+                <!-- Right Column: Frequency Mapping -->
                 <div style="flex: 1; background: rgba(40, 40, 40, 0.2); border-radius: 6px; padding: 15px; border: 1px solid #444; overflow: hidden;">
-                    <h3 style="color: #FF9800; margin-bottom: 15px; font-size: 14px;">🎛️ Parameter → Audio Mapping</h3>
+                    <h3 style="color: #FF9800; margin-bottom: 15px; font-size: 14px;">🎛️ Audio → Parameter Mapping</h3>
                     
                     <div style="font-size: 11px; color: #ccc; margin-bottom: 15px;">
-                        Map fractal parameters to audio frequencies and beat detection.
+                        Assign fractal parameters to each audio frequency band and control.
                     </div>
                     
-                    <div id="parameterMappings" style="height: calc(100% - 80px); overflow-y: auto; padding-right: 5px;">
-                        <!-- Parameter mapping controls will be populated here -->
+                    <div id="frequencyMappings" style="height: calc(100% - 80px); overflow-y: auto; padding-right: 5px;">
+                        <!-- Frequency mapping controls will be populated here -->
                     </div>
                 </div>
             </div>
@@ -745,7 +759,7 @@ export class AudioSystem {
         
         // Initialize the display
         this.updateEqualizerDisplay();
-        this.populateParameterMappings();
+        this.populateFrequencyMappings();
         
         // Start real-time updates
         this.startEqualizerUpdates();
@@ -939,84 +953,167 @@ export class AudioSystem {
         });
     }
     
-    populateParameterMappings() {
-        const container = document.getElementById('parameterMappings');
+    populateFrequencyMappings() {
+        const container = document.getElementById('frequencyMappings');
         if (!container) return;
         
-        // Get all available parameters
-        const artisticParams = this.app.parameters.getParameterKeys();
+        // Define all available frequency bands and controls
+        const audioSources = [
+            { key: 'subBass', name: 'Sub-Bass', description: '20-60Hz', color: '#8E24AA' },
+            { key: 'bass', name: 'Bass', description: '60-250Hz', color: '#1976D2' }, 
+            { key: 'lowMid', name: 'Low-Mid', description: '250-500Hz', color: '#00796B' },
+            { key: 'mid', name: 'Mid', description: '500-2kHz', color: '#388E3C' },
+            { key: 'highMid', name: 'High-Mid', description: '2-4kHz', color: '#F57C00' },
+            { key: 'presence', name: 'Presence', description: '4-6kHz', color: '#E64A19' },
+            { key: 'brilliance', name: 'Brilliance', description: '6-8kHz', color: '#C62828' },
+            { key: 'air', name: 'Air', description: '8-12kHz', color: '#AD1457' },
+            { key: 'ultra', name: 'Ultra', description: '12-16kHz', color: '#6A1B9A' },
+            { key: 'super', name: 'Super', description: '16-20kHz+', color: '#4527A0' },
+            { key: 'beat', name: 'Beat Detection', description: 'Beat trigger', color: '#D32F2F' },
+            { key: 'overall', name: 'Overall Volume', description: 'Total audio level', color: '#455A64' }
+        ];
         
-        container.innerHTML = artisticParams.map(paramKey => {
-            const param = this.app.parameters.getParameter(paramKey);
-            const mapping = this.parameterMappings[paramKey] || { source: '', sensitivity: 1.0 };
+        // Get all available parameters for dropdowns (artistic + debug)
+        const artisticParams = this.app.parameters.getParameterKeys();
+        const debugParams = this.app.parameters.getAllDebugParameterKeys();
+        
+        // Find which parameters are currently mapped to each audio source
+        const reverseMappings = {};
+        Object.entries(this.parameterMappings).forEach(([mappingKey, mapping]) => {
+            if (mapping.source) {
+                if (!reverseMappings[mapping.source]) {
+                    reverseMappings[mapping.source] = [];
+                }
+                reverseMappings[mapping.source].push({ 
+                    mappingKey: mappingKey,
+                    paramKey: mapping.paramKey || mappingKey, // Support both old and new format
+                    sensitivity: mapping.sensitivity 
+                });
+            }
+        });
+        
+        container.innerHTML = audioSources.map(audioSource => {
+            const mappedParams = reverseMappings[audioSource.key] || [];
             
             return `
-                <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;" data-param="${paramKey}">
-                    <div style="font-size: 11px; color: #fff; margin-bottom: 6px;">${param.name}</div>
-                    <div style="display: flex; gap: 8px; align-items: center; font-size: 10px;">
-                        <select class="audio-mapping-select" data-param="${paramKey}" style="flex: 1; padding: 2px; background: #333; border: 1px solid #555; color: #fff; border-radius: 2px; font-size: 9px;">
-                            <option value="">No mapping</option>
-                            <option value="subBass" ${mapping.source === 'subBass' ? 'selected' : ''}>Sub-Bass (20-60Hz)</option>
-                            <option value="bass" ${mapping.source === 'bass' ? 'selected' : ''}>Bass (60-250Hz)</option>
-                            <option value="lowMid" ${mapping.source === 'lowMid' ? 'selected' : ''}>Low-Mid (250-500Hz)</option>
-                            <option value="mid" ${mapping.source === 'mid' ? 'selected' : ''}>Mid (500-2kHz)</option>
-                            <option value="highMid" ${mapping.source === 'highMid' ? 'selected' : ''}>High-Mid (2-4kHz)</option>
-                            <option value="presence" ${mapping.source === 'presence' ? 'selected' : ''}>Presence (4-6kHz)</option>
-                            <option value="brilliance" ${mapping.source === 'brilliance' ? 'selected' : ''}>Brilliance (6-8kHz)</option>
-                            <option value="air" ${mapping.source === 'air' ? 'selected' : ''}>Air (8-12kHz)</option>
-                            <option value="ultra" ${mapping.source === 'ultra' ? 'selected' : ''}>Ultra (12-16kHz)</option>
-                            <option value="super" ${mapping.source === 'super' ? 'selected' : ''}>Super (16-20kHz+)</option>
-                            <option value="beat" ${mapping.source === 'beat' ? 'selected' : ''}>Beat Detection</option>
-                            <option value="overall" ${mapping.source === 'overall' ? 'selected' : ''}>Overall Volume</option>
+                <div style="margin-bottom: 12px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px; border-left: 3px solid ${audioSource.color};" data-audio-source="${audioSource.key}">
+                    <div style="font-size: 11px; color: #fff; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                        <span style="font-weight: bold;">${audioSource.name}</span>
+                        <span style="color: #999; font-size: 9px;">${audioSource.description}</span>
+                    </div>
+                    
+                    <!-- Add Parameter Section -->
+                    <div style="display: flex; gap: 6px; align-items: center; font-size: 10px; margin-bottom: 8px;">
+                        <select class="frequency-add-parameter" data-audio-source="${audioSource.key}" style="flex: 1; padding: 2px; background: #333; border: 1px solid #555; color: #fff; border-radius: 2px; font-size: 9px;">
+                            <option value="">+ Add parameter...</option>
+                            <optgroup label="Artistic Parameters">
+                                ${artisticParams.map(paramKey => {
+                                    try {
+                                        const param = this.app.parameters.getParameter(paramKey);
+                                        const isAlreadyMapped = mappedParams.some(mp => mp.paramKey === paramKey);
+                                        return `<option value="${paramKey}">${param.name}${isAlreadyMapped ? ' (mapped)' : ''}</option>`;
+                                    } catch (error) {
+                                        console.error('Error getting artistic parameter:', paramKey, error);
+                                        return '';
+                                    }
+                                }).join('')}
+                            </optgroup>
+                            <optgroup label="Debug Parameters">
+                                ${debugParams.map(paramKey => {
+                                    try {
+                                        const param = this.app.parameters.getParameter(paramKey);
+                                        const isAlreadyMapped = mappedParams.some(mp => mp.paramKey === paramKey);
+                                        return `<option value="${paramKey}">${param.name}${isAlreadyMapped ? ' (mapped)' : ''}</option>`;
+                                    } catch (error) {
+                                        console.error('Error getting debug parameter:', paramKey, error);
+                                        return '';
+                                    }
+                                }).join('')}
+                            </optgroup>
                         </select>
-                        <input type="range" class="audio-sensitivity-slider" data-param="${paramKey}" 
-                               min="0" max="3" step="0.1" value="${mapping.sensitivity}" 
-                               style="width: 60px;" title="Sensitivity">
-                        <span class="sensitivity-value" style="width: 30px; text-align: center;">${mapping.sensitivity.toFixed(1)}</span>
+                        <button class="frequency-add-btn" data-audio-source="${audioSource.key}" style="padding: 2px 8px; background: #4CAF50; color: #fff; border: none; border-radius: 2px; cursor: pointer; font-size: 9px;">Add</button>
+                    </div>
+                    
+                    <!-- Mapped Parameters List -->
+                    <div class="mapped-parameters" data-audio-source="${audioSource.key}">
+                        ${mappedParams.map(mappedParam => {
+                            try {
+                                const param = this.app.parameters.getParameter(mappedParam.paramKey);
+                                const paramType = artisticParams.includes(mappedParam.paramKey) ? 'artistic' : 'debug';
+                                return `
+                                    <div style="display: flex; gap: 6px; align-items: center; font-size: 9px; margin-bottom: 4px; padding: 4px; background: rgba(0,0,0,0.3); border-radius: 2px;" data-param-mapping="${mappedParam.mappingKey}">
+                                        <span style="flex: 1; color: ${paramType === 'artistic' ? '#4CAF50' : '#FF9800'};" title="${paramType === 'artistic' ? 'Artistic Parameter' : 'Debug Parameter'}">${param.name}</span>
+                                        <input type="range" class="param-sensitivity-slider" data-mapping-key="${mappedParam.mappingKey}"
+                                               min="0" max="3" step="0.1" value="${mappedParam.sensitivity}" 
+                                               style="width: 50px;" title="Sensitivity">
+                                        <span class="param-sensitivity-value" style="width: 25px; text-align: center; color: #fff;">${mappedParam.sensitivity.toFixed(1)}</span>
+                                        <button class="param-remove-btn" data-mapping-key="${mappedParam.mappingKey}" style="padding: 1px 4px; background: #F44336; color: #fff; border: none; border-radius: 2px; cursor: pointer; font-size: 8px;">×</button>
+                                    </div>
+                                `;
+                            } catch (error) {
+                                console.error('Error creating mapped parameter display:', mappedParam.paramKey, error);
+                                return '';
+                            }
+                        }).join('')}
+                        ${mappedParams.length === 0 ? `<div style="font-size: 9px; color: #666; font-style: italic; padding: 4px;">No parameters mapped</div>` : ''}
                     </div>
                 </div>
             `;
         }).join('');
         
         // Set up event handlers for the mapping controls
-        this.setupMappingEventHandlers();
+        this.setupFrequencyMappingEventHandlers();
     }
     
-    setupMappingEventHandlers() {
-        // Handle audio source selection changes
-        document.querySelectorAll('.audio-mapping-select').forEach(select => {
-            select.addEventListener('change', (e) => {
-                const paramKey = e.target.dataset.param;
-                const source = e.target.value;
+    setupFrequencyMappingEventHandlers() {
+        // Handle adding new parameter mappings
+        document.querySelectorAll('.frequency-add-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const audioSource = e.target.dataset.audioSource;
+                const select = document.querySelector(`.frequency-add-parameter[data-audio-source="${audioSource}"]`);
+                const paramKey = select.value;
                 
-                if (source) {
-                    if (!this.parameterMappings[paramKey]) {
-                        this.parameterMappings[paramKey] = {};
-                    }
-                    this.parameterMappings[paramKey].source = source;
-                } else {
-                    delete this.parameterMappings[paramKey];
+                if (paramKey) {
+                    // Create a unique mapping key for this parameter-frequency combination
+                    const mappingKey = `${paramKey}_${audioSource}`;
+                    
+                    // Add new mapping (allowing multiple frequency bands per parameter)
+                    this.parameterMappings[mappingKey] = {
+                        paramKey: paramKey,
+                        source: audioSource,
+                        sensitivity: 1.0
+                    };
+                    
+                    // Reset select and update display
+                    select.value = '';
+                    this.populateFrequencyMappings();
                 }
             });
         });
         
-        // Handle sensitivity slider changes
-        document.querySelectorAll('.audio-sensitivity-slider').forEach(slider => {
+        // Handle parameter removal
+        document.querySelectorAll('.param-remove-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const mappingKey = e.target.dataset.mappingKey;
+                delete this.parameterMappings[mappingKey];
+                this.populateFrequencyMappings();
+            });
+        });
+        
+        // Handle sensitivity changes for individual parameters
+        document.querySelectorAll('.param-sensitivity-slider').forEach(slider => {
             slider.addEventListener('input', (e) => {
-                const paramKey = e.target.dataset.param;
+                const mappingKey = e.target.dataset.mappingKey;
                 const sensitivity = parseFloat(e.target.value);
                 
-                // Update display
-                const valueSpan = e.target.parentNode.querySelector('.sensitivity-value');
-                if (valueSpan) {
-                    valueSpan.textContent = sensitivity.toFixed(1);
+                if (this.parameterMappings[mappingKey]) {
+                    this.parameterMappings[mappingKey].sensitivity = sensitivity;
                 }
                 
-                // Update mapping
-                if (!this.parameterMappings[paramKey]) {
-                    this.parameterMappings[paramKey] = { source: '', sensitivity: sensitivity };
-                } else {
-                    this.parameterMappings[paramKey].sensitivity = sensitivity;
+                // Update the displayed value
+                const valueSpan = e.target.parentElement.querySelector('.param-sensitivity-value');
+                if (valueSpan) {
+                    valueSpan.textContent = sensitivity.toFixed(1);
                 }
             });
         });
@@ -1027,7 +1124,7 @@ export class AudioSystem {
             resetBtn.onclick = () => {
                 if (confirm('Reset all audio-to-parameter mappings?')) {
                     this.parameterMappings = {};
-                    this.populateParameterMappings();
+                    this.populateFrequencyMappings();
                 }
             };
         }
@@ -1071,7 +1168,7 @@ export class AudioSystem {
             'truchet_radius': { source: 'air', sensitivity: 0.9 }
         };
         
-        this.populateParameterMappings();
+        this.populateFrequencyMappings();
         this.app.ui.updateStatus('🎵 Loaded preset audio mappings', 'success');
     }
     
@@ -1150,7 +1247,7 @@ export class AudioSystem {
                 this.parameterMappings = mappingData.parameterMappings;
                 
                 // Update the UI
-                this.populateParameterMappings();
+                this.populateFrequencyMappings();
                 
                 // Update beat detection controls if menu is open
                 const beatToggle = document.getElementById('beatDetectionToggle');

@@ -432,6 +432,26 @@
     transition: none !important;
 }
 
+/* Disable hover effects when parameter value is being edited */
+.debug-param-line:has(input) {
+    transition: none !important;
+    transform: none !important;
+}
+
+.debug-param-line:has(input):hover {
+    background: transparent !important;
+    border-left-color: transparent !important;
+    transform: none !important;
+}
+
+.param-value:has(input) {
+    background-color: transparent !important;
+}
+
+.param-value:has(input):hover {
+    background-color: transparent !important;
+}
+
 /* ==========================================================================
    MATHEMATICAL CATEGORY COLOR CODING
    ========================================================================== */

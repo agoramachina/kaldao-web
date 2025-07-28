@@ -142,6 +142,7 @@ export class DebugUIManager {
     // ENHANCEMENT: Set up mouse interaction for parameter selection and editing
     setupMouseInteraction() {
         const parameterLines = document.querySelectorAll('.debug-param-line[data-param-key]');
+        const parameterValues = document.querySelectorAll('.param-value[data-param-key]');
         
         parameterLines.forEach(line => {
             const paramKey = line.getAttribute('data-param-key');
@@ -149,6 +150,9 @@ export class DebugUIManager {
             
             // Click to select parameter (only if not in keyboard navigation mode)
             line.addEventListener('click', (e) => {
+                // Don't select if clicking on the value span (that's for editing)
+                if (e.target.classList.contains('param-value')) return;
+                
                 e.preventDefault();
                 if (!this.keyboardNavigationActive) {
                     this.selectParameterByKey(paramKey, paramType);
@@ -169,6 +173,30 @@ export class DebugUIManager {
                     e.preventDefault();
                     e.stopPropagation();
                 }
+            });
+        });
+        
+        // Add click handlers for parameter values
+        parameterValues.forEach(valueSpan => {
+            const paramKey = valueSpan.getAttribute('data-param-key');
+            
+            valueSpan.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent line selection
+                if (!this.keyboardNavigationActive) {
+                    this.editParameterValue(paramKey, valueSpan.parentElement);
+                }
+            });
+            
+            // Add visual feedback for clickable values
+            valueSpan.addEventListener('mouseenter', (e) => {
+                if (!this.keyboardNavigationActive) {
+                    valueSpan.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
+                }
+            });
+            
+            valueSpan.addEventListener('mouseleave', (e) => {
+                valueSpan.style.backgroundColor = 'transparent';
             });
         });
     }
@@ -203,7 +231,14 @@ export class DebugUIManager {
         const param = this.app.parameters.getParameter(paramKey);
         if (!param) return;
         
+        // Find the value span within the line element
+        const valueSpan = lineElement.querySelector('.param-value[data-param-key="' + paramKey + '"]');
+        if (!valueSpan) return;
+        
         const currentValue = param.value;
+        
+        // Store original content for restoration
+        const originalContent = valueSpan.textContent;
         
         // Create inline editor
         const input = document.createElement('input');
@@ -218,19 +253,15 @@ export class DebugUIManager {
             color: #ffffff;
             font-family: 'Courier New', monospace;
             font-size: 11px;
-            padding: 2px 4px;
+            padding: 1px 3px;
             border-radius: 2px;
-            width: 80px;
-            margin-left: 10px;
+            width: 70px;
+            text-align: right;
         `;
         
-        // Save reference to original content
-        const originalContent = lineElement.innerHTML;
-        
-        // Replace line content with editor
-        const paramName = param.name.padEnd(26);
-        lineElement.innerHTML = `${paramName}: `;
-        lineElement.appendChild(input);
+        // Replace value span content with editor
+        valueSpan.innerHTML = '';
+        valueSpan.appendChild(input);
         
         // Focus and select all text
         input.focus();
@@ -247,28 +278,54 @@ export class DebugUIManager {
                 // Update parameter value
                 this.app.parameters.setValue(paramKey, newValue);
                 
-                // Update displays
-                this.updateDebugMenuDisplay();
+                // Restore the value span with new value
+                let displayValue;
+                if (param.step >= 1.0) {
+                    displayValue = newValue.toFixed(0);
+                } else if (param.step >= 0.1) {
+                    displayValue = newValue.toFixed(1);
+                } else if (param.step >= 0.01) {
+                    displayValue = newValue.toFixed(2);
+                } else if (param.step >= 0.001) {
+                    displayValue = newValue.toFixed(3);
+                } else {
+                    displayValue = newValue.toFixed(4);
+                }
+                
+                valueSpan.textContent = displayValue.padStart(8);
+                
+                // Update displays - use lightweight update to avoid losing focus
+                this.updateSelectionOnly();
                 this.app.ui.updateDisplay();
                 
                 this.app.ui.updateStatus(`${param.name} set to ${newValue.toFixed(3)}`, 'success');
             } else {
-                // Invalid value, revert
-                lineElement.innerHTML = originalContent;
+                // Invalid value, revert value span content
+                valueSpan.textContent = originalContent;
                 this.app.ui.updateStatus(`Invalid value for ${param.name} (range: ${param.min} to ${param.max})`, 'error');
             }
         };
         
         // Handle keyboard events
         input.addEventListener('keydown', (e) => {
+            e.stopPropagation(); // Prevent all event propagation
             if (e.key === 'Enter') {
                 e.preventDefault();
                 finishEdit();
             } else if (e.key === 'Escape') {
                 e.preventDefault();
-                lineElement.innerHTML = originalContent;
+                // Restore value span content on escape
+                valueSpan.textContent = originalContent;
             }
         });
+        
+        // Prevent all other events from propagating during editing
+        input.addEventListener('keyup', (e) => e.stopPropagation());
+        input.addEventListener('keypress', (e) => e.stopPropagation());
+        input.addEventListener('input', (e) => e.stopPropagation());
+        input.addEventListener('mousemove', (e) => e.stopPropagation());
+        input.addEventListener('mouseenter', (e) => e.stopPropagation());
+        input.addEventListener('mouseleave', (e) => e.stopPropagation());
         
         // Handle focus loss
         input.addEventListener('blur', finishEdit);
@@ -326,7 +383,8 @@ export class DebugUIManager {
             const backgroundColor = isCurrent ? 'rgba(76, 175, 80, 0.1)' : 'transparent';
             
             debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="artistic" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;">`;
-            debugHTML += `${param.name.padEnd(26)}: ${displayValue.padStart(8)}`;
+            debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
+            debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px;">${displayValue.padStart(8)}</span>`;
             debugHTML += `</div>`;
         });
 
@@ -364,7 +422,8 @@ export class DebugUIManager {
                 
                 // ENHANCEMENT: Add click handlers for mouse interaction
                 debugHTML += `<div class="debug-param-line" data-param-key="${key}" data-param-type="debug" style="color: ${textColor}; font-weight: ${fontWeight}; background: ${backgroundColor}; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;">`;
-                debugHTML += `${param.name.padEnd(26)}: ${displayValue.padStart(8)}`;
+                debugHTML += `<span class="param-name">${param.name.padEnd(26)}: </span>`;
+                debugHTML += `<span class="param-value" data-param-key="${key}" style="cursor: pointer; padding: 1px 3px; border-radius: 2px;">${displayValue.padStart(8)}</span>`;
                 debugHTML += `</div>`;
             });
         });
@@ -384,22 +443,30 @@ export class DebugUIManager {
 
         const currentKey = this.allDebugKeys[this.currentDebugParameterIndex];
         
-        // Remove current selection from all items
+        // Remove current selection from all items and restore their original styling
         const allParamLines = document.querySelectorAll('.debug-param-line');
         allParamLines.forEach(line => {
+            const paramKey = line.getAttribute('data-param-key');
+            const paramType = line.getAttribute('data-param-type');
+            
             line.classList.remove('debug-param-current');
-            line.style.fontWeight = 'normal';
-            line.style.color = '#ffffff';
-            line.style.background = 'transparent';
+            
+            // Restore appropriate non-selected styling based on parameter type
+            if (paramType === 'artistic') {
+                // Artistic parameters get white text when not selected
+                line.style.cssText = 'color: #ffffff; font-weight: normal; background: transparent; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
+            } else {
+                // Debug parameters get white text when not selected  
+                line.style.cssText = 'color: #ffffff; font-weight: normal; background: transparent; margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
+            }
         });
         
         // Apply current selection to the right item
         const currentLine = document.querySelector(`[data-param-key="${currentKey}"]`);
         if (currentLine) {
             currentLine.classList.add('debug-param-current');
-            currentLine.style.fontWeight = 'bold';
-            currentLine.style.color = '#4CAF50';
-            currentLine.style.background = 'rgba(76, 175, 80, 0.1)';
+            // Apply selected styling with complete CSS text to override any existing inline styles
+            currentLine.style.cssText = 'color: #4CAF50; font-weight: bold; background: rgba(76, 175, 80, 0.1); margin: 2px 0; font-size: 11px; padding: 1px 3px; border-radius: 2px;';
         }
         
         // Update the current parameter info panel

@@ -732,7 +732,7 @@ export class AudioSystem {
         this.advancedMenuVisible = true;
         
         // Set up event handlers
-        this.setupAdvancedMenuHandlers(overlay);
+        this.setupAdvancedMenuHandlers(dialog);
         
         // Initialize the display
         this.updateEqualizerDisplay();
@@ -751,7 +751,7 @@ export class AudioSystem {
         this.stopEqualizerUpdates();
     }
     
-    setupAdvancedMenuHandlers(overlay) {
+    setupAdvancedMenuHandlers(dialog) {
         // Close button
         const closeBtn = document.getElementById('advancedAudioClose');
         if (closeBtn) {
@@ -777,8 +777,8 @@ export class AudioSystem {
         }
         
         // Click outside to close
-        overlay.onclick = (e) => {
-            if (e.target === overlay) {
+        dialog.onclick = (e) => {
+            if (e.target === dialog) {
                 this.hideAdvancedAudioMenu();
             }
         };

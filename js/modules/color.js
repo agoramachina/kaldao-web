@@ -181,7 +181,7 @@ export class ColorManager {
         this.advancedColorMenuVisible = true;
         
         // Set up event handlers
-        this.setupAdvancedColorMenuHandlers(overlay);
+        this.setupAdvancedColorMenuHandlers(dialog);
         
         // Initialize the display
         this.updateColorPreview();
@@ -201,7 +201,7 @@ export class ColorManager {
         this.stopColorPreviewUpdates();
     }
     
-    setupAdvancedColorMenuHandlers(overlay) {
+    setupAdvancedColorMenuHandlers(dialog) {
         // Close button
         const closeBtn = document.getElementById('advancedColorClose');
         if (closeBtn) {
@@ -209,8 +209,8 @@ export class ColorManager {
         }
         
         // Click outside to close
-        overlay.onclick = (e) => {
-            if (e.target === overlay) {
+        dialog.onclick = (e) => {
+            if (e.target === dialog) {
                 this.hideAdvancedColorMenu();
             }
         };

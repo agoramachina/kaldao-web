@@ -136,8 +136,8 @@ Mathematical constants exposed from shader:
 | `C` | Advanced color menu (palette editor & layer colors) |
 | `Shift` + `C` | Reset to black & white |
 | `I` | Invert colors |
-| `A` | Upload audio file / toggle playback |
 | `M` | Toggle microphone |
+| `Shift` + `M` | Advanced audio menu |
 | `Ctrl` + `S` | Save parameters |
 | `Ctrl` + `L` | Load parameters |
 | `Ctrl` + `Z` / `Y` | Undo/redo |
@@ -146,10 +146,16 @@ Mathematical constants exposed from shader:
 #### Debug Mode Only
 | Keyboard shortcut | Description |
 |-------------------|-------------|
+| `C` | Advanced color menu (same as normal mode) |
+| `Shift` + `C` | Reset to black & white |
+| `I` | Invert colors |
+| `R` | Reset current debug parameter |
+| `Shift` + `R` | Reset all parameters (with confirmation) |
+| `M` | Toggle microphone |
 | `E` | Export debug state to clipboard |
 | `D` | Show debug system statistics |
 | `H` | Show debug mode help |
-| `.` | Safe randomization of debug parameters |
+| `,` | Safe randomization of debug parameters |
 
 ### Mobile Controls
 

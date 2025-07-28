@@ -166,10 +166,7 @@ export class ControlsManager {
                 this.app.ui.toggleMenu();
                 break;
                 
-            case 'KeyA':
-                e.preventDefault();
-                this.app.audio.toggleAudio();
-                break;
+            // KeyA removed - audio functionality is now in advanced audio menu (Shift+M)
                 
             case 'KeyZ':
                 e.preventDefault();
@@ -326,6 +323,33 @@ export class ControlsManager {
                 e.preventDefault();
                 // M: Open advanced audio menu for audio-reactive mathematical exploration
                 this.app.audio.toggleMicrophone();
+                break;
+                
+            case 'KeyC':  // COLOR MENU IN DEBUG MODE
+                e.preventDefault();
+                if (e.shiftKey) {
+                    this.resetToBlackWhite();
+                } else {
+                    // Show advanced color menu - same as normal mode for consistency
+                    this.app.parameters.showAdvancedColorMenu();
+                }
+                break;
+                
+            case 'KeyI':  // INVERT COLORS IN DEBUG MODE
+                e.preventDefault();
+                // Visual inversion should work in both modes for consistency
+                this.toggleInvertColors();
+                break;
+                
+            case 'KeyR':  // RESET IN DEBUG MODE
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Reset all parameters (with confirmation) - works in both modes
+                    this.resetAllParameters();
+                } else {
+                    // Reset current debug parameter
+                    this.app.debugUI.resetCurrentDebugParameter();
+                }
                 break;
                 
             case 'Comma':  // RANDOMIZE DEBUG PARAMETERS ONLY

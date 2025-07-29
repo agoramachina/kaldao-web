@@ -150,7 +150,7 @@ export class UIManager {
             
             // Movement & Animation
             paramsHTML += '<div style="color: #4CAF50; font-weight: bold; margin-bottom: 5px;">MOVEMENT & ANIMATION</div>';
-            const movementParams = ['fly_speed', 'rotation_speed', 'plane_rotation_speed', 'zoom_level'];
+            const movementParams = ['fly_speed', 'rotation_speed', 'plane_rotation_speed', 'zoom_level', 'color_speed'];
             movementParams.forEach(key => {
                 const param = this.app.parameters.getParameter(key);
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
@@ -180,19 +180,6 @@ export class UIManager {
             paramsHTML += '<div style="color: #9C27B0; font-weight: bold; margin-bottom: 5px;">CAMERA & PATH</div>';
             const cameraParams = ['camera_tilt_x', 'camera_tilt_y', 'camera_roll', 'path_stability', 'path_scale'];
             cameraParams.forEach(key => {
-                const param = this.app.parameters.getParameter(key);
-                const index = this.app.parameters.getParameterKeys().indexOf(key);
-                const isCurrent = index === this.app.currentParameterIndex;
-                const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
-            });
-            
-            paramsHTML += '<br>';
-            
-            // Color & Animation Speed
-            paramsHTML += '<div style="color: #FF5722; font-weight: bold; margin-bottom: 5px;">COLOR & SPEED</div>';
-            const colorParams = ['color_speed'];
-            colorParams.forEach(key => {
                 const param = this.app.parameters.getParameter(key);
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;

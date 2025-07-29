@@ -86,7 +86,7 @@
     letter-spacing: 0.5px;                  /* Improve readability at small sizes */
     
     /* Scrolling behavior for parameter lists longer than viewport */
-    max-height: calc(90vh - 100px);          /* Leave room for headers and controls */
+    max-height: calc(92vh - 80px);           /* Increased height to fit more parameters */
     overflow-y: auto;                        /* Enable scrolling when needed */
     
     /* Custom scrollbar styling for professional appearance */
@@ -363,6 +363,19 @@
     .debug-category-header {
         break-inside: avoid;                /* Keep categories intact across columns */
         break-after: avoid;
+    }
+    
+    /* Keep parameter groups together within categories */
+    .debug-param-line {
+        break-inside: avoid;                /* Prevent breaking individual parameter lines */
+    }
+    
+    /* Create a wrapper for each category to keep it together */
+    .debug-category-wrapper {
+        break-inside: avoid;                /* Keep entire category together */
+        display: inline-block;              /* Ensure proper column breaking behavior */
+        width: 100%;
+        margin-bottom: 10px;
     }
 }
 

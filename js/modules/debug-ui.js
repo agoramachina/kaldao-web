@@ -445,6 +445,9 @@ export class DebugUIManager {
 
         // Build the display category by category for all parameters (artistic + debug)
         Object.keys(categories).forEach(categoryName => {
+            // Wrap each category in a container to keep it together in columns
+            debugHTML += `<div class="debug-category-wrapper">`;
+            
             // Category header with consistent styling - add special class for artistic parameters
             const categoryClass = categoryName === 'ARTISTIC PARAMETERS' ? 'debug-category-header artistic-category' : 'debug-category-header';
             debugHTML += `<div class="${categoryClass}">${categoryName}</div>`;
@@ -470,6 +473,9 @@ export class DebugUIManager {
                 debugHTML += `<input type="range" class="param-slider" data-param-key="${key}" min="${param.min}" max="${param.max}" step="${param.step}" value="${param.value}">`;
                 debugHTML += `</div>`;
             });
+            
+            // Close category wrapper
+            debugHTML += `</div>`;
         });
 
         debugParamsList.innerHTML = debugHTML;

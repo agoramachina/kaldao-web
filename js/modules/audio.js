@@ -1348,4 +1348,56 @@ export class AudioSystem {
         
         // Event listener cleanup no longer needed - handled by main controls
     }
+    
+    // Get current audio system state for saving
+    getState() {
+        return {
+            audioReactive: this.audioReactive,
+            microphoneActive: this.microphoneActive,
+            selectedMicrophoneId: this.selectedMicrophoneId,
+            beatDetection: {
+                enabled: this.beatDetection.enabled,
+                threshold: this.beatDetection.threshold,
+                minTimeBetweenBeats: this.beatDetection.minTimeBetweenBeats,
+                historySize: this.beatDetection.historySize
+            },
+            parameterMappings: { ...this.parameterMappings }
+        };
+    }
+    
+    // Set audio system state from loaded data
+    setState(state) {
+        if (!state) return;
+        
+        // Restore basic audio settings
+        if (state.audioReactive !== undefined) {
+            this.audioReactive = state.audioReactive;
+        }
+        
+        // Restore microphone settings (but don't auto-activate)
+        if (state.selectedMicrophoneId !== undefined) {
+            this.selectedMicrophoneId = state.selectedMicrophoneId;
+        }
+        
+        // Restore beat detection settings
+        if (state.beatDetection) {
+            if (state.beatDetection.enabled !== undefined) {
+                this.beatDetection.enabled = state.beatDetection.enabled;
+            }
+            if (state.beatDetection.threshold !== undefined) {
+                this.beatDetection.threshold = state.beatDetection.threshold;
+            }
+            if (state.beatDetection.minTimeBetweenBeats !== undefined) {
+                this.beatDetection.minTimeBetweenBeats = state.beatDetection.minTimeBetweenBeats;
+            }
+            if (state.beatDetection.historySize !== undefined) {
+                this.beatDetection.historySize = state.beatDetection.historySize;
+            }
+        }
+        
+        // Restore parameter mappings
+        if (state.parameterMappings) {
+            this.parameterMappings = { ...state.parameterMappings };
+        }
+    }
 }

@@ -20,6 +20,7 @@ export class Renderer {
         this.canvas = null;                // The HTML canvas where visuals appear
         this.program = null;               // The compiled shader program (vertex + fragment shaders)
         this.uniforms = {};                // Our "directory" of uniform locations - like phone numbers for GPU variables
+        this.app = null;                   // Reference to main app for accessing color manager
         
         // Enhanced tracking for debug system
         this.uniformStats = {              // Statistics about uniform usage for optimization and debugging
@@ -263,6 +264,21 @@ export class Renderer {
             uniform vec3 u_palette_c;            // Color palette coefficient C
             uniform vec3 u_palette_d;            // Color palette coefficient D
             
+            // Layer colors from JSON presets
+            uniform vec3 u_layer_color_0;
+            uniform vec3 u_layer_color_1;
+            uniform vec3 u_layer_color_2;
+            uniform vec3 u_layer_color_3;
+            uniform vec3 u_layer_color_4;
+            uniform vec3 u_layer_color_5;
+            uniform vec3 u_layer_color_6;
+            uniform vec3 u_layer_color_7;
+            uniform vec3 u_layer_color_8;
+            uniform vec3 u_layer_color_9;
+            uniform vec3 u_layer_color_10;
+            uniform vec3 u_layer_color_11;
+            uniform int u_layer_color_count;
+            
             #define PI 3.14159265359
             
             // MATHEMATICAL UTILITY FUNCTIONS
@@ -458,7 +474,10 @@ export class Renderer {
             // 'u_use_color_palette', 'u_use_layer_colors' removed - replaced by u_color_mode
             'u_invert_colors', 'u_color_mode',
             'u_palette_a', 'u_palette_b', 'u_palette_c', 'u_palette_d',
-            'u_layer_colors', 'u_layer_color_count'
+            'u_layer_color_0', 'u_layer_color_1', 'u_layer_color_2', 'u_layer_color_3',
+            'u_layer_color_4', 'u_layer_color_5', 'u_layer_color_6', 'u_layer_color_7',
+            'u_layer_color_8', 'u_layer_color_9', 'u_layer_color_10', 'u_layer_color_11',
+            'u_layer_color_count'
         ];
         
         // Create the complete uniform registry
@@ -624,6 +643,9 @@ export class Renderer {
             this.gl.uniform1f(this.uniforms.u_color_mode, parameters.getValue('color_mode'));
         }
         
+        // Layer colors from JSON presets
+        this.setLayerColorUniforms();
+        
         // Color palette coefficients for mathematical color generation
         const palette = parameters.getPalette(renderState.currentPaletteIndex);
         if (palette && this.uniforms.u_palette_a) {
@@ -632,6 +654,65 @@ export class Renderer {
             this.gl.uniform3f(this.uniforms.u_palette_c, palette.c[0], palette.c[1], palette.c[2]);
             this.gl.uniform3f(this.uniforms.u_palette_d, palette.d[0], palette.d[1], palette.d[2]);
         }
+    }
+    
+    // Set layer color uniforms from color manager
+    setLayerColorUniforms() {
+        // Get the color manager's app reference to access layer colors
+        if (!this.app || !this.app.color || !this.app.color.layerColorPalettes) {
+            // Fallback colors if color manager not ready
+            const fallbackColors = [
+                [0.557, 0.141, 0.667], [0.098, 0.463, 0.824], [0.000, 0.475, 0.420], [0.220, 0.557, 0.235],
+                [0.961, 0.486, 0.000], [0.902, 0.290, 0.098], [0.776, 0.157, 0.157], [0.678, 0.078, 0.341],
+                [0.416, 0.106, 0.604], [0.271, 0.153, 0.627], [0.827, 0.184, 0.184], [0.271, 0.353, 0.392]
+            ];
+            
+            for (let i = 0; i < 12; i++) {
+                const uniformName = `u_layer_color_${i}`;
+                if (this.uniforms[uniformName]) {
+                    const color = fallbackColors[i] || [1.0, 1.0, 1.0];
+                    this.gl.uniform3f(this.uniforms[uniformName], color[0], color[1], color[2]);
+                }
+            }
+            
+            if (this.uniforms.u_layer_color_count) {
+                this.gl.uniform1i(this.uniforms.u_layer_color_count, 12);
+            }
+            return;
+        }
+        
+        const currentPalette = this.app.color.layerColorPalettes[this.app.color.currentLayerPaletteIndex];
+        
+        if (currentPalette && currentPalette.colors) {
+            // Convert hex colors to RGB and send to shader
+            for (let i = 0; i < 12; i++) {
+                const uniformName = `u_layer_color_${i}`;
+                if (this.uniforms[uniformName]) {
+                    if (i < currentPalette.colors.length) {
+                        const hex = currentPalette.colors[i];
+                        const rgb = this.hexToRgb(hex);
+                        this.gl.uniform3f(this.uniforms[uniformName], rgb.r, rgb.g, rgb.b);
+                    } else {
+                        // Fallback to white for unused slots
+                        this.gl.uniform3f(this.uniforms[uniformName], 1.0, 1.0, 1.0);
+                    }
+                }
+            }
+            
+            if (this.uniforms.u_layer_color_count) {
+                this.gl.uniform1i(this.uniforms.u_layer_color_count, currentPalette.colors.length);
+            }
+        }
+    }
+    
+    // Convert hex color to normalized RGB
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16) / 255,
+            g: parseInt(result[2], 16) / 255,
+            b: parseInt(result[3], 16) / 255
+        } : { r: 1, g: 1, b: 1 }; // fallback to white
     }
     
     // RENDERING PERFORMANCE TRACKING

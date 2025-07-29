@@ -83,6 +83,7 @@ class KaldaoApp {
             // The renderer must initialize first because it sets up the WebGL context
             // that other systems may need to query for capabilities
             await this.renderer.init();
+            this.renderer.app = this; // Give renderer access to app for color manager
             console.log('✅ Mathematical rendering engine initialized');
             
             // PHASE 2: Input and interface systems
@@ -95,7 +96,7 @@ class KaldaoApp {
             // OSC system removed
             this.fileManager.init(this);              // State persistence system
             this.debugUI.init(this);                  // Mathematical exploration interface
-            this.color.init(this);                    // Color system management
+            await this.color.init(this);              // Color system management (async for preset loading)
             console.log('✅ All interface and control systems initialized');
             
             // PHASE 3: System integration and event handling

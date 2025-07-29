@@ -101,8 +101,20 @@ uniform vec3 u_palette_b;                  // Color palette coefficient B
 uniform vec3 u_palette_c;                  // Color palette coefficient C
 uniform vec3 u_palette_d;                  // Color palette coefficient D
 
-// Layer colors (loaded from presets, not hardcoded)
-uniform vec3 u_layer_colors[12];           // Array of layer colors from JSON presets
+// Layer colors (loaded from presets, not hardcoded) 
+// Using individual uniforms for better compatibility
+uniform vec3 u_layer_color_0;
+uniform vec3 u_layer_color_1;
+uniform vec3 u_layer_color_2;
+uniform vec3 u_layer_color_3;
+uniform vec3 u_layer_color_4;
+uniform vec3 u_layer_color_5;
+uniform vec3 u_layer_color_6;
+uniform vec3 u_layer_color_7;
+uniform vec3 u_layer_color_8;
+uniform vec3 u_layer_color_9;
+uniform vec3 u_layer_color_10;
+uniform vec3 u_layer_color_11;
 uniform int u_layer_color_count;           // Number of colors in current layer palette
 
 #define PI 3.14159265359
@@ -380,7 +392,21 @@ vec4 plane(vec3 ro, vec3 rd, vec3 pp, vec3 off, float aa, float n) {
     if (u_color_mode > 1.5) { // Mode 2: Layer Colors
         // Use dynamic layer colors from JSON presets (not hardcoded)
         int layerIndex = int(mod(n, float(u_layer_color_count)));
-        layerColor = layerIndex < u_layer_color_count ? u_layer_colors[layerIndex] : vec3(1.0);
+        
+        // Manual array lookup for better compatibility
+        if (layerIndex == 0) layerColor = u_layer_color_0;
+        else if (layerIndex == 1) layerColor = u_layer_color_1;
+        else if (layerIndex == 2) layerColor = u_layer_color_2;
+        else if (layerIndex == 3) layerColor = u_layer_color_3;
+        else if (layerIndex == 4) layerColor = u_layer_color_4;
+        else if (layerIndex == 5) layerColor = u_layer_color_5;
+        else if (layerIndex == 6) layerColor = u_layer_color_6;
+        else if (layerIndex == 7) layerColor = u_layer_color_7;
+        else if (layerIndex == 8) layerColor = u_layer_color_8;
+        else if (layerIndex == 9) layerColor = u_layer_color_9;
+        else if (layerIndex == 10) layerColor = u_layer_color_10;
+        else if (layerIndex == 11) layerColor = u_layer_color_11;
+        else layerColor = vec3(1.0); // fallback to white
     }
     
     // Convert distance to color with layer-specific fill color

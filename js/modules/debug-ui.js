@@ -21,7 +21,6 @@ export class DebugUIManager {
             audioEffects: false,     // 🎨 Which parameters audio affects
             performanceFrames: false, // 🎬 Frame performance every 60 frames
             microphoneSetup: true,   // 🎤 Microphone initialization info
-            // OSC system removed
             parameterChanges: false, // 📊 Parameter value changes
             systemStatus: false      // 🔧 System diagnostics
         };
@@ -71,7 +70,6 @@ export class DebugUIManager {
             this.startSystemStatusUpdates();
             this.updateSystemStatus(); // Initial update
             
-            // OSC system removed
             
             // Provide user feedback about entering debug mode
             this.app.ui.updateStatus('DEBUG MODE: Use ↑/↓ to navigate, ←/→ to adjust', 'info');
@@ -84,7 +82,6 @@ export class DebugUIManager {
             // Stop system status monitoring
             this.stopSystemStatusUpdates();
             
-            // OSC system removed
             
             
             // Update normal UI to reflect any changes made in debug mode
@@ -752,11 +749,6 @@ export class DebugUIManager {
         statusHTML += `${systemStatus.animationPaused ? '⏸️' : '▶️'} ${systemStatus.animationPaused ? 'Paused' : 'Animation'}<br>`;
         statusHTML += `${systemStatus.audioReactive ? '🎵' : '🔇'} Audio: ${systemStatus.audioReactive ? 'Reactive' : 'Static'}`;
         
-        // OSC hardware status if available
-        if (this.app.osc && this.app.osc.isActive()) {
-            const oscStatus = this.app.osc.getStatus();
-            statusHTML += `<br>🎛️ Hardware: ${oscStatus.connected ? 'Connected' : 'Connecting'}`;
-        }
         statusHTML += `</div>`;
         
         // Memory and performance warnings
@@ -790,11 +782,8 @@ export class DebugUIManager {
         }
     }
     
-    // OSC system removed
     
-    // OSC system removed
     
-    // OSC system removed
     
     // Set up microphone selection controls
     async setupMicrophoneControls() {
@@ -936,7 +925,6 @@ export class DebugUIManager {
             { key: 'audioEffects', label: '🎨 Audio Effects', desc: 'Which parameters audio modifies' },
             { key: 'performanceFrames', label: '🎬 Performance Frames', desc: 'Frame timing every 60 frames' },
             { key: 'microphoneSetup', label: '🎤 Microphone Setup', desc: 'Device initialization info' },
-            // OSC system removed
             { key: 'parameterChanges', label: '📊 Parameter Changes', desc: 'When parameters are modified' },
             { key: 'systemStatus', label: '🔧 System Status', desc: 'Internal system diagnostics' }
         ];

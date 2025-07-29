@@ -195,11 +195,8 @@ export class ControlsManager {
                 }
                 break;
                 
-            // KeyM removed - microphone functionality moved to KeyA
-                
             case 'KeyO':
                 e.preventDefault();
-                // OSC functionality removed
                 break;
                 
             case 'KeyD':  // DEBUG LOGGING CONTROLS (available in normal mode too)

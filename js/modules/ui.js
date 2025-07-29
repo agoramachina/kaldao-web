@@ -232,8 +232,6 @@ export class UIManager {
                 allAudioStatus.innerHTML = `🎵 File: ${playStatus}<br>🎤 Microphone: OFF<br>🔊 Audio Reactive: ${reactiveStatus}<br><em>Press A for mic</em>`;
             }
         }
-        
-        // OSC system removed
     }
 
     // Set up click interaction for artistic parameters

@@ -82,13 +82,9 @@ if (this.uniforms[uniformName] !== undefined) {
 const audioModifiedValue = baseValue + (audioAnalysis.bass * multiplier);
 ```
 
-## Mobile Architecture
+## Mobile Support
 
-**MobileControls** (`mobile.js`) provides:
-- Touch gesture recognition (swipe, pinch, tap patterns)
-- DeviceMotion API integration for tilt-to-control-camera
-- Shake detection for parameter randomization
-- Responsive UI adaptation
+The application provides responsive design and touch-friendly controls through the main UI system. Mobile interactions are handled through standard web APIs for touch events and device orientation.
 
 ## Parameter System Architecture
 

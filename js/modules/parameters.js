@@ -216,8 +216,6 @@ export class ParameterManager {
         // Audio modifiers system - non-destructive parameter modification
         // These store temporary audio-reactive adjustments that are applied on top of base parameter values
         this.audioModifiers = {};
-        
-        // OSC system removed
 
         // Parameter navigation arrays (existing system unchanged)
         this.parameterKeys = [
@@ -520,6 +518,4 @@ export class ParameterManager {
     hasAudioModifier(key) {
         return this.audioModifiers[key] !== undefined;
     }
-
-    // OSC system removed
 }

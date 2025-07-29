@@ -40,45 +40,89 @@ export class ColorManager {
         console.log('🎨 Loading color presets from JSON files...');
         
         try {
-            // Load classic mathematical palettes
-            const classicFiles = ['bw', 'rainbow', 'fire', 'ocean', 'purple', 'neon', 'sunset'];
+            // Load from unified index file
             this.colorPalettes = [];
-            
-            for (const filename of classicFiles) {
-                try {
-                    const response = await fetch(`presets/colors/classic/${filename}.json`);
-                    if (response.ok) {
-                        const palette = await response.json();
-                        // Convert to legacy format for compatibility
-                        this.colorPalettes.push({
-                            name: palette.name,
-                            a: palette.coefficients.a,
-                            b: palette.coefficients.b,
-                            c: palette.coefficients.c,
-                            d: palette.coefficients.d
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`Failed to load classic palette ${filename}:`, error);
-                }
-            }
-            
-            // Load layer color palettes
-            const layerFiles = ['default', 'sunset'];
             this.layerColorPalettes = [];
             
-            for (const filename of layerFiles) {
-                try {
-                    const response = await fetch(`presets/colors/layers/${filename}.json`);
-                    if (response.ok) {
-                        const palette = await response.json();
-                        this.layerColorPalettes.push({
-                            name: palette.name,
-                            colors: palette.colors
-                        });
+            try {
+                const indexResponse = await fetch('presets/colors/index.json');
+                if (indexResponse.ok) {
+                    const index = await indexResponse.json();
+                    
+                    // Load classic palettes
+                    const classicFiles = index.classic?.presets || [];
+                    for (const filename of classicFiles) {
+                        try {
+                            const response = await fetch(`presets/colors/classic/${filename}.json`);
+                            if (response.ok) {
+                                const palette = await response.json();
+                                // Convert to legacy format for compatibility
+                                this.colorPalettes.push({
+                                    name: palette.name,
+                                    a: palette.coefficients.a,
+                                    b: palette.coefficients.b,
+                                    c: palette.coefficients.c,
+                                    d: palette.coefficients.d
+                                });
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to load classic palette ${filename}:`, error);
+                        }
                     }
-                } catch (error) {
-                    console.warn(`Failed to load layer palette ${filename}:`, error);
+                    
+                    // Load layer palettes
+                    const layerFiles = index.layers?.presets || [];
+                    for (const filename of layerFiles) {
+                        try {
+                            const response = await fetch(`presets/colors/layers/${filename}.json`);
+                            if (response.ok) {
+                                const palette = await response.json();
+                                this.layerColorPalettes.push({
+                                    name: palette.name,
+                                    colors: palette.colors
+                                });
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to load layer palette ${filename}:`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load unified index, using fallback lists:', error);
+                // Fallback to hardcoded lists if index fails
+                const fallbackClassicFiles = ['bw', 'rainbow', 'fire', 'ocean', 'purple', 'neon', 'sunset'];
+                for (const filename of fallbackClassicFiles) {
+                    try {
+                        const response = await fetch(`presets/colors/classic/${filename}.json`);
+                        if (response.ok) {
+                            const palette = await response.json();
+                            this.colorPalettes.push({
+                                name: palette.name,
+                                a: palette.coefficients.a,
+                                b: palette.coefficients.b,
+                                c: palette.coefficients.c,
+                                d: palette.coefficients.d
+                            });
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to load classic palette ${filename}:`, error);
+                    }
+                }
+                
+                const fallbackLayerFiles = ['default', 'sunset', 'bright', 'fire', 'moody', 'pride', 'rainbow', 'raspberry'];
+                for (const filename of fallbackLayerFiles) {
+                    try {
+                        const response = await fetch(`presets/colors/layers/${filename}.json`);
+                        if (response.ok) {
+                            const palette = await response.json();
+                            this.layerColorPalettes.push({
+                                name: palette.name,
+                                colors: palette.colors
+                            });
+                        }
+                    } catch (error) {
+                        console.warn(`Failed to load layer palette ${filename}:`, error);
+                    }
                 }
             }
             
@@ -194,7 +238,7 @@ export class ColorManager {
                         <div style="margin-bottom: 10px;">
                             <label style="display: flex; align-items: center; font-size: 12px; margin-bottom: 6px;">
                                 <input type="radio" name="colorMode" id="colorModeBlackWhite" value="0" style="margin-right: 8px;">
-                                Black & White (Traditional)
+                                Monochrome (B&W)
                             </label>
                             
                             <label style="display: flex; align-items: center; font-size: 12px; margin-bottom: 6px;">
@@ -304,6 +348,9 @@ export class ColorManager {
         
         if (prevBtn) {
             prevBtn.onclick = () => {
+                // Don't do anything if button is disabled (B&W mode)
+                if (prevBtn.disabled) return;
+                
                 const colorMode = this.app.parameters.getValue('color_mode');
                 if (colorMode > 1.5) { // Layer Colors mode
                     this.currentLayerPaletteIndex = Math.max(0, this.currentLayerPaletteIndex - 1);
@@ -318,6 +365,9 @@ export class ColorManager {
         
         if (nextBtn) {
             nextBtn.onclick = () => {
+                // Don't do anything if button is disabled (B&W mode)
+                if (nextBtn.disabled) return;
+                
                 const colorMode = this.app.parameters.getValue('color_mode');
                 if (colorMode > 1.5) { // Layer Colors mode
                     this.currentLayerPaletteIndex = Math.min(this.layerColorPalettes.length - 1, this.currentLayerPaletteIndex + 1);
@@ -519,6 +569,8 @@ export class ColorManager {
         const colorModeRadios = document.querySelectorAll('input[name="colorMode"]');
         const invertCheckbox = document.getElementById('invertColors');
         const paletteSelector = document.getElementById('paletteSelector');
+        const prevBtn = document.getElementById('previewPrevPalette');
+        const nextBtn = document.getElementById('previewNextPalette');
         
         // Set the correct radio button based on current color mode
         const currentMode = this.app.parameters.getValue('color_mode');
@@ -530,11 +582,33 @@ export class ColorManager {
             invertCheckbox.checked = this.app.invertColors;
         }
         
+        // Disable/enable navigation controls based on color mode
+        const isBlackWhiteMode = currentMode < 0.5;
+        
+        if (prevBtn) {
+            prevBtn.disabled = isBlackWhiteMode;
+            prevBtn.style.opacity = isBlackWhiteMode ? '0.3' : '1.0';
+            prevBtn.style.cursor = isBlackWhiteMode ? 'not-allowed' : 'pointer';
+        }
+        
+        if (nextBtn) {
+            nextBtn.disabled = isBlackWhiteMode;
+            nextBtn.style.opacity = isBlackWhiteMode ? '0.3' : '1.0';
+            nextBtn.style.cursor = isBlackWhiteMode ? 'not-allowed' : 'pointer';
+        }
+        
         if (paletteSelector) {
             const colorMode = this.app.parameters.getValue('color_mode');
             let options = '';
             
-            if (colorMode > 1.5) { // Mode 2: Layer Colors
+            if (colorMode < 0.5) { // Mode 0: B&W - Lock to B&W only
+                options = `<option value="0">B&W</option>`;
+                paletteSelector.innerHTML = options;
+                paletteSelector.value = 0;
+                paletteSelector.disabled = true;
+                paletteSelector.style.opacity = '0.6';
+                paletteSelector.style.cursor = 'not-allowed';
+            } else if (colorMode > 1.5) { // Mode 2: Layer Colors
                 // Show layer color palettes
                 options = this.layerColorPalettes.map((palette, index) => 
                     `<option value="${index}">${palette.name}</option>`
@@ -545,7 +619,10 @@ export class ColorManager {
                 
                 paletteSelector.innerHTML = options;
                 paletteSelector.value = this.currentLayerPaletteIndex;
-            } else {
+                paletteSelector.disabled = false;
+                paletteSelector.style.opacity = '1.0';
+                paletteSelector.style.cursor = 'pointer';
+            } else { // Mode 1: Original Palette
                 // Show original mathematical palettes
                 options = this.colorPalettes.map((palette, index) => 
                     `<option value="${index}">${palette.name}</option>`
@@ -556,6 +633,9 @@ export class ColorManager {
                 
                 paletteSelector.innerHTML = options;
                 paletteSelector.value = this.app.currentPaletteIndex;
+                paletteSelector.disabled = false;
+                paletteSelector.style.opacity = '1.0';
+                paletteSelector.style.cursor = 'pointer';
             }
         }
     }

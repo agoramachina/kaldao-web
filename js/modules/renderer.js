@@ -688,14 +688,11 @@ export class Renderer {
             for (let i = 0; i < 12; i++) {
                 const uniformName = `u_layer_color_${i}`;
                 if (this.uniforms[uniformName]) {
-                    if (i < currentPalette.colors.length) {
-                        const hex = currentPalette.colors[i];
-                        const rgb = this.hexToRgb(hex);
-                        this.gl.uniform3f(this.uniforms[uniformName], rgb.r, rgb.g, rgb.b);
-                    } else {
-                        // Fallback to white for unused slots
-                        this.gl.uniform3f(this.uniforms[uniformName], 1.0, 1.0, 1.0);
-                    }
+                    // Cycle through colors if we have more layers than colors
+                    const colorIndex = i % currentPalette.colors.length;
+                    const hex = currentPalette.colors[colorIndex];
+                    const rgb = this.hexToRgb(hex);
+                    this.gl.uniform3f(this.uniforms[uniformName], rgb.r, rgb.g, rgb.b);
                 }
             }
             

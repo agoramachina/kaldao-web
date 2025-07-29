@@ -188,7 +188,7 @@ export class AudioSystem {
                     this.audioReactive = true;
                     this.app.ui.updateStatus(`🎵 Playing: ${file.name} (Reactive mode)`, 'success');
                 } catch (playError) {
-                    this.app.ui.updateStatus(`⚠️ Audio loaded but autoplay blocked. Press A to play.`, 'info');
+                    this.app.ui.updateStatus(`⚠️ Audio loaded but autoplay blocked. Click play button to start.`, 'info');
                 }
                 
             } catch (error) {
@@ -902,27 +902,72 @@ export class AudioSystem {
         const container = document.getElementById('equalizerDisplay');
         if (!container) return;
         
-        // Clear existing bars
-        container.innerHTML = '';
+        // Create bars only if they don't exist (first time)
+        if (container.children.length === 0) {
+            const bandNames = Object.keys(this.frequencyBands);
+            const colors = ['#F44336', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#8BC34A', '#4CAF50', '#00BCD4', '#2196F3', '#9C27B0'];
+            
+            bandNames.forEach((bandName, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'eq-bar';
+                bar.dataset.bandName = bandName;
+                bar.style.cssText = `
+                    flex: 1;
+                    background: ${colors[index] || '#666'};
+                    margin: 0 1px;
+                    border-radius: 2px 2px 0 0;
+                    transition: height 0.08s ease;
+                    min-height: 2px;
+                    height: 2%;
+                `;
+                container.appendChild(bar);
+            });
+        }
         
-        // Create bars for each frequency band
+        // Update only the heights of existing bars (much faster)
+        const bars = container.children;
         const bandNames = Object.keys(this.frequencyBands);
-        const colors = ['#F44336', '#FF5722', '#FF9800', '#FFC107', '#FFEB3B', '#8BC34A', '#4CAF50', '#00BCD4', '#2196F3', '#9C27B0'];
         
-        bandNames.forEach((bandName, index) => {
-            const band = this.frequencyBands[bandName];
-            const bar = document.createElement('div');
-            bar.style.cssText = `
-                flex: 1;
-                background: ${colors[index] || '#666'};
-                margin: 0 1px;
-                border-radius: 2px 2px 0 0;
-                transition: height 0.1s ease;
-                min-height: 2px;
-                height: ${Math.max(2, band.value * 100)}%;
-            `;
-            container.appendChild(bar);
-        });
+        for (let i = 0; i < bars.length && i < bandNames.length; i++) {
+            const band = this.frequencyBands[bandNames[i]];
+            const height = Math.max(2, band.value * 100);
+            if (bars[i].style.height !== `${height}%`) {
+                bars[i].style.height = `${height}%`;
+            }
+        }
+    }
+    
+    // Generate cached parameter options for performance
+    _generateParameterOptions() {
+        const artisticParams = this.app.parameters.getParameterKeys();
+        const debugParams = this.app.parameters.getAllDebugParameterKeys();
+        
+        const artisticOptionsHTML = artisticParams.map(paramKey => {
+            try {
+                const param = this.app.parameters.getParameter(paramKey);
+                return `<option value="${paramKey}">${param.name}</option>`;
+            } catch (error) {
+                console.error('Error getting artistic parameter:', paramKey, error);
+                return '';
+            }
+        }).join('');
+        
+        const debugOptionsHTML = debugParams.map(paramKey => {
+            try {
+                const param = this.app.parameters.getParameter(paramKey);
+                return `<option value="${paramKey}">${param.name}</option>`;
+            } catch (error) {
+                console.error('Error getting debug parameter:', paramKey, error);
+                return '';
+            }
+        }).join('');
+        
+        return { artisticOptionsHTML, debugOptionsHTML };
+    }
+    
+    // Clear cached parameter options (call when parameters might have changed)
+    _clearParameterCache() {
+        this._cachedParameterOptions = null;
     }
     
     populateFrequencyMappings() {
@@ -945,9 +990,12 @@ export class AudioSystem {
             { key: 'overall', name: 'Overall Volume', description: 'Total audio level', color: '#455A64' }
         ];
         
-        // Get all available parameters for dropdowns (artistic + debug)
-        const artisticParams = this.app.parameters.getParameterKeys();
-        const debugParams = this.app.parameters.getAllDebugParameterKeys();
+        // Cache parameter options to avoid repeated lookups
+        if (!this._cachedParameterOptions) {
+            this._cachedParameterOptions = this._generateParameterOptions();
+        }
+        
+        const { artisticOptionsHTML, debugOptionsHTML } = this._cachedParameterOptions;
         
         // Find which parameters are currently mapped to each audio source
         const reverseMappings = {};
@@ -979,28 +1027,10 @@ export class AudioSystem {
                         <select class="frequency-add-parameter" data-audio-source="${audioSource.key}" style="flex: 1; padding: 2px; background: #333; border: 1px solid #555; color: #fff; border-radius: 2px; font-size: 9px;">
                             <option value="">+ Add parameter...</option>
                             <optgroup label="Artistic Parameters">
-                                ${artisticParams.map(paramKey => {
-                                    try {
-                                        const param = this.app.parameters.getParameter(paramKey);
-                                        const isAlreadyMapped = mappedParams.some(mp => mp.paramKey === paramKey);
-                                        return `<option value="${paramKey}">${param.name}${isAlreadyMapped ? ' (mapped)' : ''}</option>`;
-                                    } catch (error) {
-                                        console.error('Error getting artistic parameter:', paramKey, error);
-                                        return '';
-                                    }
-                                }).join('')}
+                                ${artisticOptionsHTML}
                             </optgroup>
                             <optgroup label="Debug Parameters">
-                                ${debugParams.map(paramKey => {
-                                    try {
-                                        const param = this.app.parameters.getParameter(paramKey);
-                                        const isAlreadyMapped = mappedParams.some(mp => mp.paramKey === paramKey);
-                                        return `<option value="${paramKey}">${param.name}${isAlreadyMapped ? ' (mapped)' : ''}</option>`;
-                                    } catch (error) {
-                                        console.error('Error getting debug parameter:', paramKey, error);
-                                        return '';
-                                    }
-                                }).join('')}
+                                ${debugOptionsHTML}
                             </optgroup>
                         </select>
                         <button class="frequency-add-btn" data-audio-source="${audioSource.key}" style="padding: 2px 8px; background: #4CAF50; color: #fff; border: none; border-radius: 2px; cursor: pointer; font-size: 9px;">Add</button>
@@ -1307,7 +1337,7 @@ export class AudioSystem {
                 this.updateEqualizerDisplay();
                 this.updateAdvancedMicrophoneVolumeLevel();
             }
-        }, 50); // 20 FPS update rate
+        }, 100); // 10 FPS update rate - less laggy
     }
     
     stopEqualizerUpdates() {

@@ -175,7 +175,11 @@ export class ControlsManager {
                 }
                 break;
                 
-            // KeyA removed - audio functionality is now in advanced audio menu (Shift+M)
+            case 'KeyA':
+                e.preventDefault();
+                // A: Toggle microphone
+                this.app.audio.toggleMicrophone();
+                break;
                 
             case 'KeyZ':
                 e.preventDefault();
@@ -191,11 +195,7 @@ export class ControlsManager {
                 }
                 break;
                 
-            case 'KeyM':
-                e.preventDefault();
-                // M: Open advanced audio menu
-                this.app.audio.toggleMicrophone();
-                break;
+            // KeyM removed - microphone functionality moved to KeyA
                 
             case 'KeyO':
                 e.preventDefault();
@@ -350,9 +350,9 @@ export class ControlsManager {
                 }
                 break;
                 
-            case 'KeyM':  // ADVANCED AUDIO MENU IN DEBUG MODE
+            case 'KeyA':  // MICROPHONE TOGGLE IN DEBUG MODE
                 e.preventDefault();
-                // M: Open advanced audio menu for audio-reactive mathematical exploration
+                // A: Toggle microphone for audio-reactive mathematical exploration
                 this.app.audio.toggleMicrophone();
                 break;
                 

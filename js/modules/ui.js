@@ -155,8 +155,8 @@ export class UIManager {
                 const param = this.app.parameters.getParameter(key);
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
-                const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
+                const selectionClass = isCurrent ? 'selected' : 'unselected';
+                paramsHTML += `<div class="artistic-param-line ${selectionClass}" data-param-key="${key}">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
             paramsHTML += '<br>';
@@ -168,10 +168,10 @@ export class UIManager {
                 const param = this.app.parameters.getParameter(key);
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
-                const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
+                const selectionClass = isCurrent ? 'selected' : 'unselected';
                 const value = key === 'kaleidoscope_segments' || key === 'layer_count' ? 
                     param.value.toFixed(0) : param.value.toFixed(3);
-                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${value}</div>`;
+                paramsHTML += `<div class="artistic-param-line ${selectionClass}" data-param-key="${key}">${param.name}: ${value}</div>`;
             });
             
             paramsHTML += '<br>';
@@ -183,8 +183,8 @@ export class UIManager {
                 const param = this.app.parameters.getParameter(key);
                 const index = this.app.parameters.getParameterKeys().indexOf(key);
                 const isCurrent = index === this.app.currentParameterIndex;
-                const style = isCurrent ? 'color: #4CAF50; font-weight: bold;' : 'color: #ffffff;';
-                paramsHTML += `<div class="artistic-param-line" data-param-key="${key}" style="${style}; cursor: pointer; padding: 2px 0;">${param.name}: ${param.value.toFixed(3)}</div>`;
+                const selectionClass = isCurrent ? 'selected' : 'unselected';
+                paramsHTML += `<div class="artistic-param-line ${selectionClass}" data-param-key="${key}">${param.name}: ${param.value.toFixed(3)}</div>`;
             });
             
             return paramsHTML;

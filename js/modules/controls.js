@@ -153,12 +153,16 @@ export class ControlsManager {
                 
             case 'KeyS':
                 e.preventDefault();
-                this.app.fileManager.saveParameters();
+                if (e.ctrlKey || e.metaKey) {
+                    this.app.fileManager.saveParameters();
+                }
                 break;
                 
             case 'KeyL':
                 e.preventDefault();
-                this.app.fileManager.loadParameters();
+                if (e.ctrlKey || e.metaKey) {
+                    this.app.fileManager.loadParameters();
+                }
                 break;
                 
             case 'Escape':

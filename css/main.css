@@ -110,6 +110,25 @@ body {
     margin-bottom: 8px; 
 }
 
+/* Artistic parameter line selection styles - matches debug menu behavior */
+.artistic-param-line {
+    cursor: pointer;
+    padding: 2px 0;
+    transition: all 0.2s ease;
+}
+
+.artistic-param-line.selected {
+    color: #4CAF50 !important;
+    font-weight: bold !important;
+    background: rgba(76, 175, 80, 0.1) !important;
+}
+
+.artistic-param-line.unselected {
+    color: #ffffff !important;
+    font-weight: normal !important;
+    background: transparent !important;
+}
+
 /* Desktop menu layout */
 .menu-desktop {
     display: block;
